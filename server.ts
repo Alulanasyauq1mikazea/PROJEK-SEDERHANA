@@ -734,21 +734,7 @@ function parsePrometheusMetrics(text: string) {
 }
 
 app.post('/api/kuma/metrics', async (req, res) => {
-  const { rawText, metricsUrl, username, password } = req.body;
-
-  // Support direct raw Prometheus text ingestion if provided
-  if (rawText && typeof rawText === 'string' && rawText.trim().length > 0) {
-    const parsedMonitors = parsePrometheusMetrics(rawText);
-    return res.json({
-      success: true,
-      source: 'raw-prometheus-text',
-      rawLength: rawText.length,
-      parsedCount: parsedMonitors.length,
-      monitors: parsedMonitors,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
+  const { metricsUrl, username, password } = req.body;
   const targetUrl = metricsUrl || 'http://192.168.77.30:3001/metrics';
   const user = username || 'uptimekumalocal';
   const pass = password || 'uk2_UEOe_mVBhVGDEjL3r3BWoDR2QqMIqwLzWadw5RXG';
