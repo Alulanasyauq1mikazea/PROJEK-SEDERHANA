@@ -1,0 +1,6 @@
+{
+  "name": "NetWatch Pro - Monitoring Dashboard",
+  "description": "Unified monitoring dashboard for MikroTik, Servers, VMs, WAF, and Websites with Prometheus, Grafana, SNMP, InfluxDB activity logs, 2FA, AI predictive analytics, Telegram & Email alerts, and automated backups.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
