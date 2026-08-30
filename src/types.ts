@@ -1,4 +1,4 @@
-export type NodeCategory = 'mikrotik' | 'server' | 'vm' | 'waf' | 'website';
+export type NodeCategory = 'mikrotik' | 'ruijie' | 'server' | 'vm' | 'waf' | 'website';
 
 export type SystemStatus = 'online' | 'warning' | 'critical' | 'offline';
 
@@ -26,6 +26,16 @@ export interface NodeMetric {
   routerOSVersion?: string;
   activeDhcpLeases?: number;
   snmpStatus?: 'connected' | 'error' | 'disabled';
+
+  // Ruijie Gateway & Reyee Cloud
+  ruijieModel?: string;
+  rgosVersion?: string;
+  multiWanStatus?: 'balanced' | 'failover' | 'single';
+  managedApsCount?: number;
+  managedSwitchesCount?: number;
+  poePowerUsageWatts?: number;
+  poeMaxBudgetWatts?: number;
+  jitterMs?: number;
   
   // Server / VM
   osName?: string;
@@ -128,4 +138,118 @@ export interface UserSecurityState {
   backupCodes: string[];
   lastLogin: string;
   userRole: 'Administrator' | 'Security Ops' | 'Auditor';
+}
+
+export interface PrometheusTarget {
+  id: string;
+  job?: string;
+  jobName?: string;
+  endpoint: string;
+  instanceIp?: string;
+  module?: 'mikrotik' | 'server' | 'waf' | 'website' | 'system' | 'custom';
+  mappedModule?: 'mikrotik' | 'server' | 'waf' | 'website' | 'system' | 'custom';
+  nodeName?: string;
+  mappedNodeName?: string;
+  state: 'UP' | 'DOWN' | 'PENDING_INSTALL';
+  isPaused?: boolean;
+  responseTimeMs?: number;
+  labels?: Record<string, string>;
+  lastScrape?: string;
+  lastScrapeTime?: string;
+  scrapeDuration?: string;
+  scrapeInterval?: string;
+  healthReason?: string;
+  selectedMetrics?: string[];
+  exporterType?: string;
+  installedOnTarget?: boolean;
+}
+
+export interface SubnetResult {
+  ip: string;
+  cidr: number;
+  netmask: string;
+  wildcardMask: string;
+  networkAddress: string;
+  broadcastAddress: string;
+  firstHost: string;
+  lastHost: string;
+  totalHosts: number;
+  usableHosts: number;
+  ipClass: string;
+  binaryIp: string;
+  binaryMask: string;
+  binaryNetwork: string;
+  isPrivate: boolean;
+}
+
+export interface RuijieWanInterface {
+  name: string;
+  type: 'WAN' | 'LAN' | 'LAN/WAN';
+  ip: string;
+  gateway: string;
+  dns: string[];
+  status: 'UP' | 'DOWN';
+  speed: string;
+  duplex: string;
+  mac: string;
+  rxBytes: number;
+  txBytes: number;
+  rxSpeedMbps: number;
+  txSpeedMbps: number;
+  packetLossPercent: number;
+  latencyMs: number;
+  jitterMs: number;
+  ispName: string;
+  isPrimary: boolean;
+  weight: number;
+}
+
+export interface RuijieReyeeDevice {
+  id: string;
+  name: string;
+  model: string;
+  type: 'AP' | 'SWITCH' | 'GATEWAY' | 'ROUTER';
+  ip: string;
+  mac: string;
+  sn: string;
+  status: 'online' | 'offline';
+  firmware: string;
+  uptime: string;
+  poePowerUsageWatts?: number;
+  poeMaxWatts?: number;
+  clientCount: number;
+  cpuUsage: number;
+  memoryUsage: number;
+  location: string;
+  rf24Channel?: number;
+  rf5Channel?: number;
+  meshRole?: 'Master' | 'Repeater' | 'Wired';
+}
+
+export interface RuijieClient {
+  id: string;
+  ip: string;
+  mac: string;
+  hostname: string;
+  deviceType: 'Phone' | 'Laptop' | 'Desktop' | 'Server' | 'IoT' | 'Printer';
+  vendor: string;
+  connectedDevice: string;
+  connectedPortOrSsid: string;
+  vlan: number;
+  rxSpeedKbps: number;
+  txSpeedKbps: number;
+  totalDataMb: number;
+  appCategory: string;
+  onlineDuration: string;
+  isRateLimited: boolean;
+  rateLimitMbps?: number;
+}
+
+export interface RuijieAppDpiStats {
+  category: string;
+  name: string;
+  rxMbps: number;
+  txMbps: number;
+  percentage: number;
+  color: string;
 }

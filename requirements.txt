@@ -1,0 +1,22 @@
+# ==============================================================================
+# NetWatch Pro - Network, MikroTik & Infrastructure Telemetry Requirements
+# Python 3.10+ Auxiliary Telemetry & Local Network Automation Utilities
+# ==============================================================================
+
+# Core System & Network Metrics
+psutil>=5.9.8
+requests>=2.31.0
+urllib3>=2.2.1
+
+# MikroTik RouterOS API & Automation
+routeros-api>=0.17.0
+paramiko>=3.4.0
+
+# OpenMetrics & Prometheus Exporters
+prometheus-client>=0.20.0
+
+# Security & Data Processing
+cryptography>=42.0.5
+python-dotenv>=1.0.1
+pydantic>=2.7.0
+schedule>=1.2.1

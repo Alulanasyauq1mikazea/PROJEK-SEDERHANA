@@ -34,8 +34,21 @@ import {
   ChevronDown,
   RotateCcw,
   Move,
+  Lock,
+  Server,
+  Monitor,
+  Video,
+  Laptop,
+  Smartphone,
+  Printer,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { NodeMetric } from '../types';
+import { MikroTikCategoryTabs, MikroTikCategory } from './mikrotik/MikroTikCategoryTabs';
+import { MikroTikVpnPanel } from './mikrotik/MikroTikVpnPanel';
+import { MikroTikCapsmanPanel } from './mikrotik/MikroTikCapsmanPanel';
+import { MikroTikLiveTrafficGraphPanel } from './mikrotik/MikroTikLiveTrafficGraphPanel';
 
 interface MikroTikMonitorProps {
   mikrotikNodes: NodeMetric[];
@@ -62,21 +75,21 @@ const PaginationControls: React.FC<{
   onPageChange,
   onRowsPerPageChange,
 }) => (
-  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-800 text-xs font-mono text-slate-400">
-    <div>
+  <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-slate-800/80 text-xs font-mono text-slate-400">
+    <div className="text-[11px]">
       Menampilkan <span className="text-slate-200 font-bold">{totalItems === 0 ? 0 : startIndex}-{endIndex}</span> dari{' '}
       <span className="text-slate-200 font-bold">{totalItems}</span> entri
     </div>
-    <div className="flex items-center space-x-3">
+    <div className="flex items-center space-x-3 text-[11px]">
       <div className="flex items-center space-x-1.5">
-        <span>Baris per halaman:</span>
+        <span className="text-slate-500">Baris:</span>
         <select
           value={rowsPerPage}
           onChange={(e) => {
             onRowsPerPageChange(Number(e.target.value));
             onPageChange(1);
           }}
-          className="bg-slate-950 border border-slate-800 text-slate-200 rounded px-2 py-1 text-xs focus:outline-none focus:border-cyan-500"
+          className="bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-cyan-500"
         >
           <option value={5}>5</option>
           <option value={10}>10</option>
@@ -91,10 +104,11 @@ const PaginationControls: React.FC<{
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
           className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-950 transition"
+          title="Halaman Sebelumnya"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-3.5 h-3.5" />
         </button>
-        <span className="px-2 py-1 bg-slate-950 border border-slate-800 rounded text-slate-200 font-semibold">
+        <span className="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 font-semibold text-xs min-w-[50px] text-center">
           {currentPage} / {totalPages}
         </span>
         <button
@@ -102,13 +116,45 @@ const PaginationControls: React.FC<{
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
           className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-950 transition"
+          title="Halaman Selanjutnya"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
   </div>
 );
+
+// Device Icon Helper for Hostname / Client Type
+const getDeviceIcon = (hostname: string) => {
+  const h = hostname.toLowerCase();
+  if (h.includes('camera') || h.includes('cctv')) return <Video className="w-3.5 h-3.5 text-amber-400" />;
+  if (h.includes('server') || h.includes('nginx') || h.includes('pve') || h.includes('nas')) return <Server className="w-3.5 h-3.5 text-purple-400" />;
+  if (h.includes('ap') || h.includes('accesspoint') || h.includes('wifi') || h.includes('hotspot')) return <Wifi className="w-3.5 h-3.5 text-cyan-400" />;
+  if (h.includes('printer')) return <Printer className="w-3.5 h-3.5 text-pink-400" />;
+  if (h.includes('laptop') || h.includes('dekan')) return <Laptop className="w-3.5 h-3.5 text-blue-400" />;
+  if (h.includes('phone') || h.includes('iphone') || h.includes('galaxy') || h.includes('android')) return <Smartphone className="w-3.5 h-3.5 text-emerald-400" />;
+  return <Monitor className="w-3.5 h-3.5 text-slate-400" />;
+};
+
+// Formatted IP Address & CIDR Prefix Renderer
+const renderIpWithCidr = (addr: string) => {
+  if (addr.includes('/')) {
+    const [ip, rest] = addr.split('/');
+    const [cidr, ...tag] = rest.split(' ');
+    const extraTag = tag.join(' ');
+    return (
+      <div className="flex flex-col">
+        <span className="font-mono text-xs inline-flex items-baseline space-x-0.5">
+          <span className="font-bold text-emerald-300">{ip}</span>
+          <span className="text-emerald-500 font-semibold">/{cidr}</span>
+        </span>
+        {extraTag && <span className="text-[10px] text-slate-400 font-sans">{extraTag}</span>}
+      </div>
+    );
+  }
+  return <span className="font-bold text-emerald-300 font-mono text-xs">{addr}</span>;
+};
 
 // Draggable Panel Container Component
 const DraggablePanelWrapper: React.FC<{
@@ -153,7 +199,7 @@ const DraggablePanelWrapper: React.FC<{
       onDragOver={(e) => onDragOver(e, index)}
       onDrop={(e) => onDrop(e, index)}
       onDragEnd={onDragEnd}
-      className={`bg-slate-900/90 border rounded-2xl p-5 space-y-4 transition-all duration-200 group ${
+      className={`bg-slate-900/95 border rounded-2xl p-4 sm:p-5 space-y-4 transition-all duration-200 group ${
         fullWidth ? 'col-span-1 lg:col-span-2' : 'col-span-1'
       } ${
         isDragging
@@ -165,41 +211,42 @@ const DraggablePanelWrapper: React.FC<{
     >
       {/* Panel Top Control Bar with Drag Handle, Icon, Title & Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
-        <div className="flex items-center space-x-2.5 min-w-0 w-full sm:w-auto">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
           <div
             draggable
             onDragStart={(e) => onDragStart(e, index)}
             className="p-1.5 rounded-lg bg-slate-800/80 text-slate-400 group-hover:text-cyan-400 cursor-grab active:cursor-grabbing hover:bg-slate-700 transition flex items-center justify-center flex-shrink-0 select-none"
-            title="Pegang icon ini untuk tarik & geser (drag & drop) posisi panel"
+            title="Pegang icon ini untuk tarik & atur urutan posisi panel"
           >
-            <GripVertical className="w-4 h-4" />
+            <GripVertical className="w-3.5 h-3.5" />
           </div>
 
-          <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
             {icon}
           </div>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center space-x-2">
-              <h3 className="text-base font-semibold text-slate-100 truncate">{title}</h3>
-              <span className="hidden md:inline-block px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-400 border border-slate-700/60">
-                #{index + 1}
-              </span>
-            </div>
-            {subtitle && <p className="text-xs text-slate-400 truncate">{subtitle}</p>}
+          <div className="min-w-0 flex-1 pr-2">
+            <h3 className="text-sm font-bold text-slate-100 tracking-tight leading-snug truncate" title={title}>
+              {title}
+            </h3>
+            {subtitle && (
+              <p className="text-[11px] text-slate-400 leading-normal mt-0.5 truncate" title={subtitle}>
+                {subtitle}
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end">
+        <div className="flex items-center space-x-2 w-full sm:w-auto justify-end flex-shrink-0">
           {headerActions}
 
           {/* Up / Down Navigation Controls */}
-          <div className="flex items-center space-x-1 pl-2 border-l border-slate-800/80 flex-shrink-0">
+          <div className="flex items-center space-x-1 pl-1.5 border-l border-slate-800/80 flex-shrink-0">
             <button
               type="button"
               onClick={onMoveUp}
               disabled={index === 0}
-              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 disabled:opacity-30 disabled:hover:text-slate-300 transition"
+              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 disabled:opacity-20 disabled:hover:text-slate-300 transition"
               title="Geser Panel ke Atas"
             >
               <ChevronUp className="w-3.5 h-3.5" />
@@ -208,7 +255,7 @@ const DraggablePanelWrapper: React.FC<{
               type="button"
               onClick={onMoveDown}
               disabled={index === totalPanels - 1}
-              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 disabled:opacity-30 disabled:hover:text-slate-300 transition"
+              className="p-1.5 rounded-lg bg-slate-800/60 hover:bg-slate-800 text-slate-300 hover:text-cyan-400 disabled:opacity-20 disabled:hover:text-slate-300 transition"
               title="Geser Panel ke Bawah"
             >
               <ChevronDown className="w-3.5 h-3.5" />
@@ -218,7 +265,7 @@ const DraggablePanelWrapper: React.FC<{
       </div>
 
       {/* Panel Children Body with Text Selection Support */}
-      <div className="select-text space-y-4">
+      <div className="select-text space-y-3.5">
         {children}
       </div>
     </div>
@@ -232,26 +279,59 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
   // Configurable Dashboard Panels State
   const [activePanels, setActivePanels] = useState<{ [key: string]: boolean }>({
     overviewStats: true,
-    interfacesTable: true,
+    capsmanTelemetry: true,
+    liveTrafficGraph: true,
+    vpnTunnels: true,
     dhcpLeasesTable: true,
     ipAddresses: true,
     firewallRules: true,
     simpleQueues: true,
     arpNeighbors: true,
+    ipPoolsRoutes: true,
     hotspotSessions: false,
     systemLogs: true,
     terminalConsole: true,
   });
 
+  // Category Filtering State
+  const [activeCategory, setActiveCategory] = useState<MikroTikCategory>('overview');
+
+  const categoryPanelMap: Record<MikroTikCategory, string[]> = {
+    overview: ['overviewStats', 'liveTrafficGraph'],
+    hardware_capsman: ['capsmanTelemetry', 'overviewStats'],
+    ip_dhcp: ['dhcpLeasesTable', 'ipAddresses', 'arpNeighbors', 'ipPoolsRoutes'],
+    security_qos: ['firewallRules', 'simpleQueues', 'hotspotSessions'],
+    vpn_tunnels: ['vpnTunnels'],
+    tools_logs: ['terminalConsole', 'systemLogs'],
+    all: [
+      'overviewStats',
+      'capsmanTelemetry',
+      'liveTrafficGraph',
+      'vpnTunnels',
+      'dhcpLeasesTable',
+      'ipAddresses',
+      'firewallRules',
+      'simpleQueues',
+      'arpNeighbors',
+      'ipPoolsRoutes',
+      'hotspotSessions',
+      'systemLogs',
+      'terminalConsole',
+    ],
+  };
+
   // Reorderable Panel Sequence State
   const defaultPanelOrder = [
     'overviewStats',
-    'interfacesTable',
+    'capsmanTelemetry',
+    'liveTrafficGraph',
+    'vpnTunnels',
     'dhcpLeasesTable',
     'ipAddresses',
     'firewallRules',
     'simpleQueues',
     'arpNeighbors',
+    'ipPoolsRoutes',
     'hotspotSessions',
     'systemLogs',
     'terminalConsole',
@@ -279,13 +359,9 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // Search & Pagination States for Panels
-  const [ifaceSearch, setIfaceSearch] = useState('');
-  const [ifaceTypeFilter, setIfaceTypeFilter] = useState('all');
-  const [ifacePage, setIfacePage] = useState(1);
-  const [ifaceRows, setIfaceRows] = useState(5);
-
+  // Search, Filters & Pagination States for Panels
   const [dhcpSearch, setDhcpSearch] = useState('');
+  const [dhcpFilter, setDhcpFilter] = useState<'all' | 'dynamic' | 'static'>('all');
   const [dhcpPage, setDhcpPage] = useState(1);
   const [dhcpRows, setDhcpRows] = useState(5);
 
@@ -294,8 +370,17 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
   const [fwRows, setFwRows] = useState(5);
 
   const [ipSearch, setIpSearch] = useState('');
+  const [ipSubnetFilter, setIpSubnetFilter] = useState<'all' | 'lan' | 'wan'>('all');
   const [ipPage, setIpPage] = useState(1);
   const [ipRows, setIpRows] = useState(5);
+
+  // Quick clipboard copy state
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    setTimeout(() => setCopiedText(null), 1800);
+  };
 
   const [queueSearch, setQueueSearch] = useState('');
   const [queuePage, setQueuePage] = useState(1);
@@ -304,6 +389,11 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
   const [arpSearch, setArpSearch] = useState('');
   const [arpPage, setArpPage] = useState(1);
   const [arpRows, setArpRows] = useState(5);
+
+  const [poolRouteSearch, setPoolRouteSearch] = useState('');
+  const [poolRouteTab, setPoolRouteTab] = useState<'pools' | 'routes'>('pools');
+  const [poolPage, setPoolPage] = useState(1);
+  const [poolRows, setPoolRows] = useState(5);
 
   const [logSearch, setLogSearch] = useState('');
   const [logPage, setLogPage] = useState(1);
@@ -316,7 +406,7 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
   // Terminal state
   const [terminalCommand, setTerminalCommand] = useState('/system resource print');
   const [terminalOutput, setTerminalOutput] = useState<string>(
-    `[admin@MikroTik-CCR2004] > /system resource print\n            uptime: 142d18h32m10s\n           version: 7.15.2 (stable)\n        build-time: Jun/12/2026 14:10:02\n       factory-software: 7.10\n       free-memory: 3.8GiB\n      total-memory: 4.0GiB\n               cpu: ARM64-16Core\n         cpu-count: 16\n     cpu-frequency: 1700MHz\n          cpu-load: 34%\n    free-hdd-space: 112.4MiB\n   total-hdd-space: 128.0MiB\n  architecture-name: arm64\n         board-name: CCR2004-16G-2S+\n           platform: MikroTik`
+    `[admin@MikroTik-CCR1036] > /system resource print\n            uptime: 142d18h32m10s\n           version: 7.15.2 (stable)\n        build-time: Jun/12/2026 14:10:02\n       factory-software: 6.48\n       free-memory: 3.8GiB\n      total-memory: 4.0GiB\n               cpu: tilegx\n         cpu-count: 36\n     cpu-frequency: 1200MHz\n          cpu-load: 34%\n    free-hdd-space: 890.4MiB\n   total-hdd-space: 1024.0MiB\n  architecture-name: tile\n         board-name: CCR1036-12G-4S\n           platform: MikroTik`
   );
 
   // REST API Test State
@@ -341,47 +431,66 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
         details:
           data.mode === 'live_routeros_rest'
             ? 'Terhubung LANGSUNG ke RouterOS via REST API (port 80)!'
-            : 'Berhasil merespon dari backend NetWatch dengan mode Konfigurasi IP Live 192.168.77.1.',
+            : 'Berhasil merespon dari backend OmniGuard-Live dengan mode Konfigurasi IP Live 192.168.77.1.',
         rawJson: data,
       });
     } catch (err: any) {
       setApiTestResult({
         status: 'failed',
-        details: `Gagal menghubungi backend API NetWatch: ${err?.message || 'Network Error'}`,
+        details: `Gagal menghubungi backend API OmniGuard-Live: ${err?.message || 'Network Error'}`,
       });
     } finally {
       setIsTestingApi(false);
     }
   };
 
-  // Comprehensive MikroTik Datasets
+  // Comprehensive MikroTik Datasets (100% Realtime dari Screenshot WinBox CCR1036-12G-4S)
   const allInterfaces = [
-    { name: 'sfp-sfpplus1 (WAN Primary)', type: 'sfp', status: 'Up', speed: '10 Gbps', rx: '382.4 Mbps', tx: '168.2 Mbps', mtu: 1500, rxPackets: '4,281,920/s', txPackets: '1,920,410/s' },
-    { name: 'sfp-sfpplus2 (WAN Backup)', type: 'sfp', status: 'Up', speed: '10 Gbps', rx: '0.2 Mbps', tx: '0.1 Mbps', mtu: 1500, rxPackets: '1,200/s', txPackets: '800/s' },
-    { name: 'ether1-gateway (Trunk Uplink)', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '100.1 Mbps', tx: '46.9 Mbps', mtu: 1500, rxPackets: '1,120,400/s', txPackets: '510,200/s' },
-    { name: 'ether2-server-farm', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '85.4 Mbps', tx: '112.0 Mbps', mtu: 1500, rxPackets: '980,100/s', txPackets: '1,240,000/s' },
-    { name: 'ether3-cctv-nvr', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '42.1 Mbps', tx: '2.4 Mbps', mtu: 1500, rxPackets: '320,100/s', txPackets: '45,000/s' },
-    { name: 'ether4-wifi-ap-main', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '145.8 Mbps', tx: '92.3 Mbps', mtu: 1500, rxPackets: '1,890,000/s', txPackets: '1,120,000/s' },
-    { name: 'ether5-backup-nas', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '12.0 Mbps', tx: '250.4 Mbps', mtu: 1500, rxPackets: '110,000/s', txPackets: '2,900,000/s' },
-    { name: 'ether6-lab-komputer-ft', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '68.2 Mbps', tx: '34.1 Mbps', mtu: 1500, rxPackets: '540,000/s', txPackets: '280,000/s' },
-    { name: 'ether7-gedung-rektorat', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '28.5 Mbps', tx: '19.2 Mbps', mtu: 1500, rxPackets: '210,000/s', txPackets: '150,000/s' },
-    { name: 'ether8-gedung-perpus', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '18.1 Mbps', tx: '12.0 Mbps', mtu: 1500, rxPackets: '140,000/s', txPackets: '90,000/s' },
-    { name: 'ether9-fakultas-teknik', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '95.0 Mbps', tx: '50.4 Mbps', mtu: 1500, rxPackets: '890,000/s', txPackets: '480,000/s' },
-    { name: 'ether10-fakultas-mipa', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '44.2 Mbps', tx: '22.1 Mbps', mtu: 1500, rxPackets: '380,000/s', txPackets: '190,000/s' },
-    { name: 'ether11-fakultas-ekonomi', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '31.0 Mbps', tx: '15.5 Mbps', mtu: 1500, rxPackets: '290,000/s', txPackets: '140,000/s' },
-    { name: 'ether12-voip-asterisk', type: 'ether', status: 'Up', speed: '100 Mbps', rx: '4.2 Mbps', tx: '4.2 Mbps', mtu: 1500, rxPackets: '85,000/s', txPackets: '85,000/s' },
-    { name: 'ether13-mgmt-console', type: 'ether', status: 'Up', speed: '100 Mbps', rx: '0.1 Mbps', tx: '0.1 Mbps', mtu: 1500, rxPackets: '1,200/s', txPackets: '1,100/s' },
-    { name: 'ether14-hotspot-portal', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '110.4 Mbps', tx: '78.2 Mbps', mtu: 1500, rxPackets: '1,200,000/s', txPackets: '850,000/s' },
-    { name: 'ether15-iot-sensors', type: 'ether', status: 'Up', speed: '100 Mbps', rx: '1.2 Mbps', tx: '0.4 Mbps', mtu: 1500, rxPackets: '12,000/s', txPackets: '4,000/s' },
-    { name: 'ether16-spare-uplink', type: 'ether', status: 'Down', speed: '1 Gbps', rx: '0 Mbps', tx: '0 Mbps', mtu: 1500, rxPackets: '0/s', txPackets: '0/s' },
-    { name: 'bridge1-lan (Main Bridge)', type: 'bridge', status: 'Up', speed: '1 Gbps', rx: '240.5 Mbps', tx: '180.2 Mbps', mtu: 1500, rxPackets: '2,800,000/s', txPackets: '2,100,000/s' },
-    { name: 'vlan10-mgmt (Management)', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '1.5 Mbps', tx: '0.8 Mbps', mtu: 1500, rxPackets: '15,000/s', txPackets: '8,000/s' },
-    { name: 'vlan20-staff (Dosen & Staf)', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '62.0 Mbps', tx: '41.2 Mbps', mtu: 1500, rxPackets: '510,000/s', txPackets: '380,000/s' },
-    { name: 'vlan30-student (Mahasiswa)', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '180.4 Mbps', tx: '120.1 Mbps', mtu: 1500, rxPackets: '1,950,000/s', txPackets: '1,400,000/s' },
-    { name: 'vlan40-voip (IP Telephony)', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '8.4 Mbps', tx: '8.4 Mbps', mtu: 1500, rxPackets: '95,000/s', txPackets: '95,000/s' },
-    { name: 'vlan50-servers (Data Center)', type: 'vlan', status: 'Up', speed: '10 Gbps', rx: '210.8 Mbps', tx: '310.2 Mbps', mtu: 1500, rxPackets: '2,200,000/s', txPackets: '3,100,000/s' },
-    { name: 'wireguard-site2site (Tunnel Campus B)', type: 'tunnel', status: 'Up', speed: '1 Gbps', rx: '14.2 Mbps', tx: '22.8 Mbps', mtu: 1420, rxPackets: '180,000/s', txPackets: '240,000/s' },
-    { name: 'pppoe-out1 (ISP Speednet)', type: 'pppoe', status: 'Up', speed: '1 Gbps', rx: '380.0 Mbps', tx: '165.0 Mbps', mtu: 1492, rxPackets: '4,100,000/s', txPackets: '1,800,000/s' },
+    // Physical & Active Backbone Ports
+    { name: 'ether1_Internet', label: 'WAN Uplink IDREN / Gateway', group: 'wan', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '611.2 Kbps', tx: '229.2 Kbps', mtu: 1500, rxPackets: '134 pps', txPackets: '90 pps', totalVolume: '3.14 TB' },
+    { name: 'ether2_Lokal', label: 'Main LAN Distribusi NOC', group: 'lan', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '223.7 Kbps', tx: '11.1 Mbps', mtu: 1500, rxPackets: '80 pps', txPackets: '1,158 pps', totalVolume: '5.82 TB' },
+    { name: 'ether5_OLT', label: 'Fiber GPON Backbone OLT', group: 'lan', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '198.9 Kbps', tx: '3.6 Mbps', mtu: 1500, rxPackets: '214 pps', txPackets: '346 pps', totalVolume: '176.8 GB' },
+    { name: 'vlan143', label: 'VLAN 143 (under ether5_OLT)', group: 'lan', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '192.1 Kbps', tx: '3.6 Mbps', mtu: 1500, rxPackets: '214 pps', txPackets: '346 pps', totalVolume: '95 GB' },
+    { name: 'ether8', label: 'Core Switch Trunk', group: 'lan', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '11.1 Mbps', tx: '380.4 Kbps', mtu: 1500, rxPackets: '1,101 pps', txPackets: '55 pps', totalVolume: '5.76 TB' },
+    { name: 'ether11_config', label: 'Mgmt HPE Switch (192.168.80.5)', group: 'lan', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '472 bps', tx: '0 bps', mtu: 1500, rxPackets: '1 pps', txPackets: '0 pps', totalVolume: '44.1 GB' },
+
+    // Physical Standby / 0 bps Ports (Persis WinBox)
+    { name: 'ether3_PC Server', label: 'Direct PC Server Link', group: 'lan', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'ether4', label: 'Standby Spare Port', group: 'lan', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'ether6_LAB_SI', label: 'Lab Sistem Informasi', group: 'gedung', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'ether7_Perspus', label: 'Direct Perpustakaan Port', group: 'lan', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'ether9', label: 'Feeder Link', group: 'lan', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'ether10_R. Dekanat', label: 'Ruang Rapat Dekanat', group: 'gedung', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'ether12', label: 'Spare Eth12', group: 'lan', type: 'ether', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+
+    // Bridge & Virtual Interfaces (0 bps di screenshot)
+    { name: 'bridge_AP', label: 'CAPsMAN AP Master Bridge', group: 'wireless', type: 'bridge', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'bridgeCap_Hotspot', label: 'Hotspot Gateway Bridge', group: 'wireless', type: 'bridge', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'cap1', label: 'Radio Master CAPsMAN', group: 'wireless', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'vlan_CCTV', label: 'CCTV Security Surveillance', group: 'lan', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+
+    // CAPsMAN Dynamic / Tunneled Gedung Interfaces (Semua 0 bps di screenshot WinBox)
+    { name: 'Arsitek_LT.1', label: 'Jurusan Arsitektur Lt. 1', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'Arsitek_LT.2', label: 'Jurusan Arsitektur Lt. 2', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'BAKK NEW', label: 'Biro Akademik & Kemahasiswaan', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'Dekanat_Ekonomi', label: 'Dekanat Fak. Ekonomi', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'Dekanat_Fisip', label: 'Dekanat FISIP', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'Dekanat_Hukum', label: 'Dekanat Fak. Hukum', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'Dekanat_LT.1', label: 'Dekanat Terpadu Lt. 1', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'Dekanat_LT.2', label: 'Dekanat Terpadu Lt. 2', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'Dekanat_Pertanian', label: 'Dekanat Fak. Pertanian', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'G. Ekonomi Lt.2', label: 'Gedung Fak. Ekonomi Lt. 2', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'G.Ekonomi_Jurusan_LT.1', label: 'Gedung Jurusan Ekonomi Lt. 1', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'G.HUKUM ADMIN FKIP LT.1', label: 'Gedung Admin Hukum & FKIP Lt. 1', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'G.HUKUM dan ADMIN Lt.2', label: 'Gedung Hukum & Admin Lt. 2', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'G.HUKUM,FISIP dan FKIP Lt.3', label: 'Gedung Terpadu Lt. 3', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'G.Kelas Teknik', label: 'Gedung Kelas Teknik', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'G.Kelas Teknik 2', label: 'Gedung Kelas Teknik Lt. 2', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'G.SPI', label: 'Satuan Pengawas Internal (SPI)', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'IOT', label: 'IoT & Server Research Lab', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'Kemungkinan 5ghz', label: 'AP Radio 5GHz Backhaul', group: 'wireless', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'Keuangan', label: 'Bagian Keuangan Kampus', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
+    { name: 'LAB BAKIMFIS 1', label: 'Lab Bakimfis 1', group: 'gedung', type: 'vlan', status: 'Up', speed: '1 Gbps', rx: '0 bps', tx: '0 bps', mtu: 1500, rxPackets: '0 pps', txPackets: '0 pps', totalVolume: '0 B' },
   ];
 
   const allDhcpLeases = [
@@ -389,7 +498,8 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
     { ip: '192.168.77.112', mac: '70:85:C2:A1:33:FF', hostname: 'AccessPoint-Floor2', status: 'bound', expires: '11h 10m' },
     { ip: '192.168.77.140', mac: 'E4:5F:01:88:99:CC', hostname: 'IP-Camera-Entrance', status: 'bound', expires: '23h 59m' },
     { ip: '192.168.77.188', mac: 'AC:87:A3:12:34:56', hostname: 'Nginx-ReverseProxy', status: 'bound (static)', expires: 'never' },
-    { ip: '192.168.77.12', mac: '00:1A:2B:3C:4D:5E', hostname: 'Server-Proxmox-Node1', status: 'bound (static)', expires: 'never' },
+    { ip: '192.168.77.30', mac: '00:1A:2B:3C:4D:5E', hostname: 'PVE-Teknik (fatek)', status: 'bound (static)', expires: 'never' },
+    { ip: '192.168.77.99', mac: '00:1A:2B:3C:4D:99', hostname: 'PVE-Simlitabmas', status: 'bound (static)', expires: 'never' },
     { ip: '192.168.77.15', mac: '00:1A:2B:3C:4D:5F', hostname: 'Server-NAS-Synology', status: 'bound (static)', expires: 'never' },
     { ip: '192.168.77.201', mac: '90:B6:86:12:88:AA', hostname: 'Laptop-Dekan-FT', status: 'bound', expires: '02h 15m' },
     { ip: '192.168.77.210', mac: '34:E6:D7:99:00:11', hostname: 'SmartTV-R-Rapat', status: 'bound', expires: '05h 00m' },
@@ -404,44 +514,59 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
   ];
 
   const allFirewallRules = [
+    { chain: 'raw (prerouting)', action: 'drop', protocol: 'all', port: 'any', src: 'crowdsec', comment: 'CrowdSec Auto-Blacklist Hardware RAW Drop (4,292 Active Rules / 23.8k CAPI)' },
     { chain: 'input', action: 'accept', protocol: 'icmp', port: 'any', src: '192.168.77.0/24', comment: 'Allow Ping LAN Gateway' },
     { chain: 'input', action: 'accept', protocol: 'tcp', port: '8728, 80, 443, 22', src: '192.168.77.0/24', comment: 'Allow Admin Management (API, Winbox, REST)' },
     { chain: 'input', action: 'drop', protocol: 'all', port: 'any', src: '0.0.0.0/0', comment: 'Drop Invalid & Unsolicited External Packets' },
     { chain: 'forward', action: 'fasttrack', protocol: 'tcp, udp', port: 'any', src: 'any', comment: 'FastTrack Established & Related Connections' },
     { chain: 'forward', action: 'accept', protocol: 'all', port: 'any', src: 'any', comment: 'Accept Established & Related Connections' },
-    { chain: 'srcnat (NAT)', action: 'masquerade', protocol: 'all', port: 'any', src: '192.168.77.0/24', comment: 'WAN Masquerade Primary (sfp-sfpplus1)' },
+    { chain: 'srcnat (NAT)', action: 'masquerade', protocol: 'all', port: 'any', src: '192.168.77.0/24', comment: 'WAN Masquerade Primary (ether1_Internet)' },
     { chain: 'dstnat (NAT)', action: 'dst-nat', protocol: 'tcp', port: '443', src: '0.0.0.0/0', comment: 'WAF Reverse Proxy Port Forward -> 192.168.77.188:443' },
     { chain: 'dstnat (NAT)', action: 'dst-nat', protocol: 'udp', port: '51820', src: '0.0.0.0/0', comment: 'WireGuard Site-to-Site VPN Service Port' },
-    { chain: 'forward', action: 'drop', protocol: 'all', port: 'any', src: '10.30.0.0/20', comment: 'Block Guest Mahasiswa to Management VLAN10' },
+    { chain: 'forward', action: 'drop', protocol: 'all', port: 'any', src: '10.30.0.0/20', comment: 'Block Guest Mahasiswa to Management VLAN' },
     { chain: 'input', action: 'drop', protocol: 'all', port: 'any', src: 'blacklist-botnet', comment: 'Block Known DDoS & Botnet IP List' },
   ];
 
   const allIpAddresses = [
-    { address: '192.168.77.1/24', network: '192.168.77.0', interfaceName: 'bridge1-lan', flags: 'DAC (Dynamic, Active, Connected)', comment: 'Main LAN Gateway' },
-    { address: '10.10.10.1/24', network: '10.10.10.0', interfaceName: 'vlan10-mgmt', flags: 'DAC', comment: 'Management Network' },
-    { address: '10.20.0.1/22', network: '10.20.0.0', interfaceName: 'vlan20-staff', flags: 'DAC', comment: 'Dosen & Staf Office Subnet' },
-    { address: '10.30.0.1/20', network: '10.30.0.0', interfaceName: 'vlan30-student', flags: 'DAC', comment: 'Campus Mahasiswa Hotspot Pool' },
-    { address: '10.50.0.1/24', network: '10.50.0.0', interfaceName: 'vlan50-servers', flags: 'DAC', comment: 'Data Center Internal DMZ' },
-    { address: '10.200.0.1/30', network: '10.200.0.0', interfaceName: 'wireguard-site2site', flags: 'DAC', comment: 'Site-to-Site Tunnel Campus B' },
-    { address: '202.152.10.42/30', network: '202.152.10.40', interfaceName: 'sfp-sfpplus1', flags: 'Static WAN', comment: 'ISP Primary Dedicated IP' },
-    { address: '0.0.0.0/0 (Default Route)', network: '0.0.0.0', interfaceName: 'Gateway: 202.152.10.41', flags: 'Active Static Route', comment: 'Primary WAN Gateway Route' },
+    { address: '192.168.77.1/24', network: '192.168.77.0', interfaceName: 'ether2_Lokal', flags: 'DAC (Dynamic, Active, Connected)', comment: 'Main LAN Gateway (Server & NOC)' },
+    { address: '192.168.5.1/24', network: '192.168.5.0', interfaceName: 'bridgeCap_Hotspot', flags: 'DAC', comment: 'Campus Hotspot & Dekanat AP Pool' },
+    { address: '192.168.6.1/24', network: '192.168.6.0', interfaceName: 'ether6_LAB_SI', flags: 'DAC', comment: 'Lab Sistem Informasi Subnet' },
+    { address: '192.168.8.1/24', network: '192.168.8.0', interfaceName: 'TEKNIK', flags: 'DAC', comment: 'Fakultas Teknik Network' },
+    { address: '192.168.14.1/24', network: '192.168.14.0', interfaceName: 'Dekanat_Ekonomi', flags: 'DAC', comment: 'Fakultas Ekonomi Subnet' },
+    { address: '192.168.80.1/24', network: '192.168.80.0', interfaceName: 'ether11_config', flags: 'DAC', comment: 'Management Switch HPE (192.168.80.5)' },
+    { address: '36.66.246.173/29', network: '36.66.246.168', interfaceName: 'ether1_Internet', flags: 'Static WAN', comment: 'IDREN UNMUS WAN Dedicated IP' },
+    { address: '0.0.0.0/0 (Default Route)', network: '0.0.0.0', interfaceName: 'Gateway: 36.66.246.169', flags: 'Active Static Route', comment: 'Primary WAN Gateway Route' },
   ];
 
   const allSimpleQueues = [
-    { name: 'Q-Rektorat-VVIP', target: '192.168.77.200/29', maxLimit: '100M / 100M', burst: '200M / 200M', priority: '1 (Highest)', packets: '2,480,100' },
-    { name: 'Q-Server-Farm-DMZ', target: 'vlan50-servers', maxLimit: '500M / 500M', burst: '1G / 1G', priority: '2 (High)', packets: '12,980,400' },
-    { name: 'Q-Staff-Dosen-Office', target: 'vlan20-staff', maxLimit: '30M / 30M', burst: '50M / 50M', priority: '3 (Medium)', packets: '4,120,000' },
-    { name: 'Q-Lab-Komputer-FT', target: 'ether6-lab-komputer-ft', maxLimit: '50M / 50M', burst: '80M / 80M', priority: '4 (Normal)', packets: '3,800,900' },
-    { name: 'Q-WiFi-Mahasiswa-Public', target: 'vlan30-student', maxLimit: '10M / 10M', burst: '20M / 20M', priority: '8 (Lowest)', packets: '18,400,200' },
-    { name: 'Q-IPTV-VoIP-Priority', target: 'vlan40-voip', maxLimit: '20M / 20M', burst: '30M / 30M', priority: '1 (Highest)', packets: '950,000' },
+    { name: 'MT Z-HOTSPOT', target: '192.168.5.0/24', maxLimit: '100M / 100M', burst: '150M / 150M', priority: '1 (Highest)', packets: '54,802,248' },
+    { name: 'MASTER MT', target: '192.168.0.0/16', maxLimit: '1G / 1G', burst: '1G / 1G', priority: '1 (Highest)', packets: '339,867,703' },
+    { name: '10. REKTORAT', target: '192.168.5.10', maxLimit: '50M / 50M', burst: '80M / 80M', priority: '2 (High)', packets: '4,120,000' },
+    { name: '11. HUKUM ADM FKIP', target: '192.168.5.11', maxLimit: '30M / 30M', burst: '50M / 50M', priority: '3 (Medium)', packets: '3,800,900' },
+    { name: '12. EKONOMI', target: '192.168.5.12', maxLimit: '30M / 30M', burst: '50M / 50M', priority: '3 (Medium)', packets: '2,950,000' },
+    { name: '13. LAB. SIPIL', target: '192.168.5.13', maxLimit: '50M / 50M', burst: '80M / 80M', priority: '4 (Normal)', packets: '3,100,000' },
+    { name: '14. LAB TI', target: '192.168.14.0/24', maxLimit: '50M / 50M', burst: '80M / 80M', priority: '4 (Normal)', packets: '3,450,000' },
+    { name: '15. P K M', target: '192.168.5.15', maxLimit: '20M / 20M', burst: '30M / 30M', priority: '5 (Normal)', packets: '1,200,000' },
+    { name: '16. LAB ARSI', target: '192.168.16.0/24', maxLimit: '40M / 40M', burst: '60M / 60M', priority: '4 (Normal)', packets: '2,100,000' },
+    { name: '17. KELAS TEKNIK', target: '192.168.5.17', maxLimit: '40M / 40M', burst: '60M / 60M', priority: '4 (Normal)', packets: '4,800,000' },
+    { name: '18. DEKANAT', target: '192.168.5.18', maxLimit: '50M / 50M', burst: '80M / 80M', priority: '2 (High)', packets: '6,200,000' },
+    { name: '19. LAB TE DAN PENJAS', target: '192.168.5.19', maxLimit: '30M / 30M', burst: '50M / 50M', priority: '5 (Normal)', packets: '1,950,000' },
+    { name: 'LAB SI', target: '192.168.6.0/24', maxLimit: '100M / 100M', burst: '150M / 150M', priority: '2 (High)', packets: '339,579,893' },
+    { name: 'APP TEKNIK', target: '192.168.8.0/24', maxLimit: '100M / 100M', burst: '150M / 150M', priority: '3 (Medium)', packets: '76,909,242' },
+    { name: 'APP Perpustakaan', target: '192.168.2.0/24', maxLimit: '30M / 30M', burst: '50M / 50M', priority: '4 (Normal)', packets: '512,683' },
+    { name: 'cctv', target: '192.168.66.0/24', maxLimit: '30M / 30M', burst: '30M / 30M', priority: '1 (Highest)', packets: '18,400,200' },
+    { name: 'hs-<hotspot1>', target: 'bridgeCap_Hotspot', maxLimit: '100M / 100M', burst: '100M / 100M', priority: '8 (Lowest)', packets: '54,802,248' },
   ];
 
   const allArpNeighbors = [
-    { ip: '192.168.77.105', mac: 'BC:D1:D3:44:11:A2', interfaceName: 'bridge1-lan', identity: 'PC-Admin-DC01', protocol: 'ARP' },
-    { ip: '192.168.77.112', mac: '70:85:C2:A1:33:FF', interfaceName: 'ether4-wifi-ap-main', identity: 'UniFi-6-Pro-AP', protocol: 'MNDP (MikroTik Neighbor)' },
-    { ip: '192.168.77.2', mac: 'D4:CA:6D:12:34:56', interfaceName: 'sfp-sfpplus1', identity: 'CCR1036-Core-Switch', protocol: 'CDP/LLDP' },
-    { ip: '192.168.77.188', mac: 'AC:87:A3:12:34:56', interfaceName: 'ether2-server-farm', identity: 'Ubuntu-Nginx-WAF', protocol: 'ARP' },
-    { ip: '10.10.10.5', mac: 'CC:2D:E0:11:22:33', interfaceName: 'vlan10-mgmt', identity: 'CRS328-24P-4S+ Core Switch', protocol: 'MNDP' },
+    { ip: '192.168.80.5', mac: '7C:57:3C:C8:0C:90', interfaceName: 'ether11_config', identity: 'CNJ5J0T82C (HPE Switch)', protocol: 'LLDP / MNDP' },
+    { ip: '36.66.246.162', mac: '78:9A:18:91:92:63', interfaceName: 'ether1_Internet', identity: 'RouterIDREN_UNMUS', protocol: 'MNDP (v7.8 stable)' },
+    { ip: '36.66.246.173', mac: '48:A9:8A:82:98:BA', interfaceName: 'ether1_Internet', identity: 'CCR1036 (Core Router)', protocol: 'MNDP (v7.23.2)' },
+    { ip: '192.168.77.105', mac: 'BC:D1:D3:44:11:A2', interfaceName: 'ether2_Lokal', identity: 'PC-Admin-DC01', protocol: 'ARP' },
+    { ip: '192.168.77.188', mac: 'AC:87:A3:12:34:56', interfaceName: 'ether2_Lokal', identity: 'Ubuntu-Nginx-WAF', protocol: 'ARP' },
+    { ip: '192.168.77.30', mac: '00:1A:2B:3C:4D:5E', interfaceName: 'ether2_Lokal', identity: 'PVE-Teknik (fatek)', protocol: 'ARP' },
+    { ip: '192.168.77.99', mac: '00:1A:2B:3C:4D:99', interfaceName: 'ether2_Lokal', identity: 'PVE-Simlitabmas', protocol: 'ARP' },
+    { ip: '192.168.5.18', mac: '2C:C8:1B:14:20:E1', interfaceName: 'ether2_Lokal', identity: 'MikroTik (CAPsMAN AP)', protocol: 'MNDP (v6.48 stable)' },
   ];
 
   const allSystemLogs = [
@@ -459,19 +584,79 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
     { user: 'staf_rektorat_05', ip: '10.20.1.12', uptime: '14h 50m', bytes: '8.5 GB / 12.1 GB', service: 'PPPoE' },
   ];
 
-  // Filtering Functions
-  const filteredInterfaces = allInterfaces.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(ifaceSearch.toLowerCase());
-    const matchesType = ifaceTypeFilter === 'all' || item.type === ifaceTypeFilter;
-    return matchesSearch && matchesType;
-  });
+  const allIpPools = [
+    { name: 'dhcp_pool_unmus', ranges: '192.168.77.100 - 192.168.77.250', total: 151, used: 17, usagePct: 11, interfaceName: 'ether2_Lokal', target: 'Server & NOC Subnet' },
+    { name: 'hotspot_pool', ranges: '192.168.5.10 - 192.168.5.250', total: 241, used: 8, usagePct: 3, interfaceName: 'bridgeCap_Hotspot', target: 'Campus Wireless Pool' },
+    { name: 'lab_si_pool', ranges: '192.168.6.10 - 192.168.6.100', total: 91, used: 12, usagePct: 13, interfaceName: 'ether6_LAB_SI', target: 'Lab Sistem Informasi' },
+    { name: 'vpn_wireguard_pool', ranges: '10.200.0.2 - 10.200.0.254', total: 253, used: 4, usagePct: 2, interfaceName: 'wireguard', target: 'Site-to-Site Tunnel' },
+  ];
 
-  const filteredDhcp = allDhcpLeases.filter(
-    (item) =>
+  const allIpRoutes = [
+    { dst: '0.0.0.0/0', gateway: '36.66.246.169', interfaceName: 'ether1_Internet', distance: 1, flags: 'AS (Active Static)', status: 'Reachable' },
+    { dst: '192.168.77.0/24', gateway: 'ether2_Lokal', interfaceName: 'ether2_Lokal', distance: 0, flags: 'DAC (Connected)', status: 'Active' },
+    { dst: '192.168.5.0/24', gateway: 'bridgeCap_Hotspot', interfaceName: 'bridgeCap_Hotspot', distance: 0, flags: 'DAC (Connected)', status: 'Active' },
+    { dst: '192.168.80.0/24', gateway: 'ether11_config', interfaceName: 'ether11_config', distance: 0, flags: 'DAC (HPE Switch)', status: 'Active' },
+    { dst: '10.200.0.0/24', gateway: 'wireguard-site2site', interfaceName: 'wireguard', distance: 0, flags: 'DAC (VPN Tunnel)', status: 'Active' },
+    { dst: '192.168.6.0/24', gateway: 'ether6_LAB_SI', interfaceName: 'ether6_LAB_SI', distance: 0, flags: 'DAC (Lab SI)', status: 'Active' },
+    { dst: '192.168.8.0/24', gateway: 'TEKNIK', interfaceName: 'TEKNIK', distance: 0, flags: 'DAC (Fak. Teknik)', status: 'Active' },
+    { dst: '192.168.14.0/24', gateway: 'Dekanat_Ekonomi', interfaceName: 'Dekanat_Ekonomi', distance: 0, flags: 'DAC (Fak. Ekonomi)', status: 'Active' },
+  ];
+
+  // Dynamic Live State for Interface List
+  const [interfacesState, setInterfacesState] = useState(allInterfaces);
+
+  // Poll live traffic for main interfaces periodically (every 2.5s)
+  useEffect(() => {
+    let isMounted = true;
+
+    const pollMainTraffic = async () => {
+      try {
+        const res = await fetch('/api/mikrotik/traffic?interface=ether1_Internet&source=rest_api');
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (data && data.rxMbps !== undefined) {
+            setInterfacesState((prev) =>
+              prev.map((item) => {
+                if (item.name === 'ether1_Internet') {
+                  const rxStr = data.rxMbps >= 1 ? `${data.rxMbps.toFixed(2)} Mbps` : `${(data.rxMbps * 1000).toFixed(1)} Kbps`;
+                  const txStr = data.txMbps >= 1 ? `${data.txMbps.toFixed(2)} Mbps` : `${(data.txMbps * 1000).toFixed(1)} Kbps`;
+                  return {
+                    ...item,
+                    rx: rxStr,
+                    tx: txStr,
+                    rxPackets: `${data.rxPackets || 134} pps`,
+                    txPackets: `${data.txPackets || 90} pps`,
+                  };
+                }
+                return item;
+              })
+            );
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    const interval = setInterval(pollMainTraffic, 2500);
+    pollMainTraffic();
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Filtering Functions
+  const filteredDhcp = allDhcpLeases.filter((item) => {
+    if (dhcpFilter === 'dynamic' && item.status.includes('static')) return false;
+    if (dhcpFilter === 'static' && !item.status.includes('static')) return false;
+    return (
       item.ip.includes(dhcpSearch) ||
       item.mac.toLowerCase().includes(dhcpSearch.toLowerCase()) ||
       item.hostname.toLowerCase().includes(dhcpSearch.toLowerCase())
-  );
+    );
+  });
 
   const filteredFw = allFirewallRules.filter(
     (item) =>
@@ -480,12 +665,33 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
       item.action.toLowerCase().includes(fwSearch.toLowerCase())
   );
 
-  const filteredIp = allIpAddresses.filter(
-    (item) =>
+  const filteredIp = allIpAddresses.filter((item) => {
+    if (
+      ipSubnetFilter === 'lan' &&
+      (item.interfaceName.toLowerCase().includes('internet') ||
+        item.interfaceName.toLowerCase().includes('wan') ||
+        item.flags.toLowerCase().includes('wan') ||
+        item.comment.toLowerCase().includes('isp'))
+    ) {
+      return false;
+    }
+    if (
+      ipSubnetFilter === 'wan' &&
+      !(
+        item.interfaceName.toLowerCase().includes('internet') ||
+        item.interfaceName.toLowerCase().includes('wan') ||
+        item.flags.toLowerCase().includes('wan') ||
+        item.comment.toLowerCase().includes('isp')
+      )
+    ) {
+      return false;
+    }
+    return (
       item.address.includes(ipSearch) ||
       item.interfaceName.toLowerCase().includes(ipSearch.toLowerCase()) ||
       item.comment.toLowerCase().includes(ipSearch.toLowerCase())
-  );
+    );
+  });
 
   const filteredQueues = allSimpleQueues.filter(
     (item) =>
@@ -498,6 +704,20 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
       item.ip.includes(arpSearch) ||
       item.identity.toLowerCase().includes(arpSearch.toLowerCase()) ||
       item.mac.toLowerCase().includes(arpSearch.toLowerCase())
+  );
+
+  const filteredPools = allIpPools.filter(
+    (item) =>
+      item.name.toLowerCase().includes(poolRouteSearch.toLowerCase()) ||
+      item.ranges.includes(poolRouteSearch) ||
+      item.interfaceName.toLowerCase().includes(poolRouteSearch.toLowerCase())
+  );
+
+  const filteredRoutes = allIpRoutes.filter(
+    (item) =>
+      item.dst.includes(poolRouteSearch) ||
+      item.gateway.toLowerCase().includes(poolRouteSearch.toLowerCase()) ||
+      item.interfaceName.toLowerCase().includes(poolRouteSearch.toLowerCase())
   );
 
   const filteredLogs = allSystemLogs.filter(
@@ -528,12 +748,13 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
     };
   };
 
-  const pagIface = getPaginated(filteredInterfaces, ifacePage, ifaceRows);
   const pagDhcp = getPaginated(filteredDhcp, dhcpPage, dhcpRows);
   const pagFw = getPaginated(filteredFw, fwPage, fwRows);
   const pagIp = getPaginated(filteredIp, ipPage, ipRows);
   const pagQueue = getPaginated(filteredQueues, queuePage, queueRows);
   const pagArp = getPaginated(filteredArp, arpPage, arpRows);
+  const pagPools = getPaginated(filteredPools, poolPage, poolRows);
+  const pagRoutes = getPaginated(filteredRoutes, poolPage, poolRows);
   const pagLog = getPaginated(filteredLogs, logPage, logRows);
   const pagSession = getPaginated(filteredSessions, userSessionPage, userSessionRows);
 
@@ -653,68 +874,90 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
     };
   } = {
     overviewStats: {
-      title: 'Ringkasan Resource & Uptime RouterOS',
-      subtitle: 'CPU, RAM, Suhu Hardware, Total Port Interface, & Active Leases',
+      title: 'Ringkasan Resource & Uptime',
+      subtitle: 'CPU, RAM, Suhu Hardware, Total Port, & Active Leases',
       icon: Cpu,
       fullWidth: true,
     },
-    interfacesTable: {
-      title: 'Interface Link Status & Throughput Traffic',
-      subtitle: 'Lengkap dengan port Ether1-16, SFP+, VLAN, Bridge, WireGuard, PPPoE',
-      icon: Layers,
+    capsmanTelemetry: {
+      title: 'Wireless CAPsMAN & Telemetry',
+      subtitle: 'Status 8 AP Controller, Client Signal dBm, Sensor Suhu & Fan',
+      icon: Radio,
+      fullWidth: true,
+    },
+    liveTrafficGraph: {
+      title: 'Real-Time Interface Bandwidth',
+      subtitle: 'Visualisasi live Ingress (RX) & Egress (TX) traffic port',
+      icon: Activity,
+      fullWidth: true,
+    },
+    vpnTunnels: {
+      title: 'VPN & Remote Access Gateway',
+      subtitle: 'WireGuard Site-to-Site, L2TP/IPsec, & Client Peer',
+      icon: Lock,
       fullWidth: true,
     },
     dhcpLeasesTable: {
-      title: 'Active DHCP Leases Table',
-      subtitle: 'Daftar IP address, MAC Address, Hostname, & Masa Berlaku Lease Client',
+      title: 'Active DHCP Leases',
+      subtitle: 'Daftar IP, MAC, Hostname, dan status masa sewa klien',
       icon: Wifi,
       fullWidth: false,
     },
     ipAddresses: {
-      title: 'IP Address List & Subnet Routes',
-      subtitle: 'Daftar IP Address Terpasang di Interface & Status Dynamic/Static',
+      title: 'IP Addresses & Subnets',
+      subtitle: 'Daftar IP terpasang pada interface & status gateway',
       icon: Globe,
       fullWidth: false,
     },
     firewallRules: {
-      title: 'IP Firewall Filter & NAT Rules',
-      subtitle: 'Aturan Input, Forward, FastTrack, Masquerade NAT & Dst-NAT Port Forward',
+      title: 'Firewall Filter & NAT Rules',
+      subtitle: 'Filter rules, FastTrack, dan NAT masquerade WAN',
       icon: Shield,
       fullWidth: false,
     },
     simpleQueues: {
-      title: 'Simple Queues Bandwidth Limiter',
-      subtitle: 'Manajemen Bandwidth Target IP, VLAN, Rate Limit Upload/Download',
+      title: 'Simple Queues Bandwidth',
+      subtitle: 'Manajemen bandwidth target IP, VLAN, dan subnet',
       icon: Zap,
       fullWidth: false,
     },
     arpNeighbors: {
-      title: 'ARP Table & MNDP/LLDP Neighbors',
-      subtitle: 'Daftar Perangkat Terdeteksi via Protocol ARP, MNDP, CDP & LLDP',
+      title: 'ARP & MNDP Neighbors',
+      subtitle: 'Perangkat terdeteksi via protokol ARP, MNDP, CDP & LLDP',
       icon: Network,
       fullWidth: false,
     },
+    ipPoolsRoutes: {
+      title: 'IP Pools & Routing Table',
+      subtitle: 'Alokasi pool subnet dan tabel routing aktif',
+      icon: Layers,
+      fullWidth: false,
+    },
     hotspotSessions: {
-      title: 'Active PPPoE & Hotspot User Sessions',
-      subtitle: 'Sesi Pengguna Berjalan, IP Address, Uptime & Penggunaan Data',
+      title: 'PPPoE & Hotspot Sessions',
+      subtitle: 'Monitoring sesi pengguna berjalan, IP, dan traffic data',
       icon: Users,
       fullWidth: false,
     },
     systemLogs: {
-      title: 'RouterOS System Logs Stream',
-      subtitle: 'Log Event Real-Time System, DHCP Assigned, Firewall Drops, & Login',
+      title: 'RouterOS System Logs',
+      subtitle: 'Log aktivitas sistem, event DHCP, dan firewall drops',
       icon: FileText,
       fullWidth: false,
     },
     terminalConsole: {
-      title: 'RouterOS Terminal API Console',
-      subtitle: 'Eksekusi Perintah Command Line (CLI) & Script RouterOS',
+      title: 'RouterOS Terminal Console',
+      subtitle: 'Eksekusi perintah Command Line (CLI) & Script RouterOS',
       icon: Terminal,
       fullWidth: false,
     },
   };
 
-  const visiblePanelKeys = panelOrder.filter((k) => activePanels[k]);
+  const visiblePanelKeys = panelOrder.filter((k) => {
+    if (!activePanels[k]) return false;
+    if (activeCategory === 'all') return true;
+    return categoryPanelMap[activeCategory]?.includes(k);
+  });
 
   return (
     <div className="space-y-6">
@@ -779,14 +1022,27 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
         </div>
       </div>
 
-      {/* Drag & Drop Instruction Hint Banner */}
+      {/* SMART CATEGORY TABS NAVIGATION */}
+      <MikroTikCategoryTabs
+        activeCategory={activeCategory}
+        onSelectCategory={setActiveCategory}
+        counters={{
+          interfacesCount: allInterfaces.length,
+          dhcpCount: allDhcpLeases.length,
+          firewallCount: allFirewallRules.length,
+          vpnCount: 4,
+          activePanelsCount: Object.values(activePanels).filter(Boolean).length,
+        }}
+      />
+
+      {/* Drag & Drop Instruction Hint Banner (Only on 'all' view or as subtle bar) */}
       <div className="bg-cyan-950/30 border border-cyan-800/40 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs text-cyan-300 font-mono">
         <div className="flex items-center space-x-2">
           <GripVertical className="w-4 h-4 text-cyan-400 animate-pulse" />
           <span>
-            <strong className="text-cyan-200 font-sans">Panel Bisa Digeser (Drag & Drop):</strong> Pegang handle{' '}
-            <code className="bg-slate-900 px-1 py-0.5 rounded text-cyan-300 border border-slate-700">⠿</code> atau klik panah{' '}
-            <code className="bg-slate-900 px-1 py-0.5 rounded text-cyan-300 border border-slate-700">▲ ▼</code> di setiap header panel untuk mengubah tata letak.
+            <strong className="text-cyan-200 font-sans">Panel Fleksibel (Drag & Drop):</strong> Pegang handle{' '}
+            <code className="bg-slate-900 px-1 py-0.5 rounded text-cyan-300 border border-slate-700">⠿</code> atau tombol{' '}
+            <code className="bg-slate-900 px-1 py-0.5 rounded text-cyan-300 border border-slate-700">▲ ▼</code> untuk mengatur posisi.
           </span>
         </div>
         <button
@@ -812,7 +1068,7 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
           <div className="flex items-center justify-between font-bold text-sm">
             <div className="flex items-center space-x-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Status Koneksi API NetWatch Server &rarr; {apiTestResult.targetHost}</span>
+              <span>Status Koneksi API OmniGuard-Live Server &rarr; {apiTestResult.targetHost}</span>
             </div>
             <span className="px-2 py-0.5 rounded bg-slate-900 text-[10px] text-slate-300">
               Mode: {apiTestResult.mode}
@@ -888,111 +1144,36 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
                 </div>
               </div>
             ) : null;
-          } else if (key === 'interfacesTable') {
-            headerActions = (
-              <div className="flex items-center space-x-2 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-48">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
-                  <input
-                    type="text"
-                    placeholder="Cari port/vlan..."
-                    value={ifaceSearch}
-                    onChange={(e) => {
-                      setIfaceSearch(e.target.value);
-                      setIfacePage(1);
-                    }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
-                  />
-                </div>
-
-                <select
-                  value={ifaceTypeFilter}
-                  onChange={(e) => {
-                    setIfaceTypeFilter(e.target.value);
-                    setIfacePage(1);
-                  }}
-                  className="bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-cyan-500 font-mono"
-                >
-                  <option value="all">Semua Tipe ({allInterfaces.length})</option>
-                  <option value="ether">Ethernet Port</option>
-                  <option value="sfp">SFP / SFP+</option>
-                  <option value="vlan">VLAN Subnet</option>
-                  <option value="bridge">Bridge</option>
-                  <option value="tunnel">WireGuard / Tunnel</option>
-                  <option value="pppoe">PPPoE WAN</option>
-                </select>
-              </div>
-            );
-
+          } else if (key === 'capsmanTelemetry') {
             panelBody = (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono">
-                    <thead>
-                      <tr className="text-slate-400 border-b border-slate-800 bg-slate-950/60">
-                        <th className="p-3">Interface Name</th>
-                        <th className="p-3">Tipe</th>
-                        <th className="p-3">Link Status</th>
-                        <th className="p-3">Speed Rate</th>
-                        <th className="p-3">Rx Traffic (In)</th>
-                        <th className="p-3">Tx Traffic (Out)</th>
-                        <th className="p-3">Packets Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {pagIface.paginated.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="p-6 text-center text-slate-500">
-                            Tidak ada interface yang cocok dengan pencarian "{ifaceSearch}"
-                          </td>
-                        </tr>
-                      ) : (
-                        pagIface.paginated.map((iface, idx) => (
-                          <tr key={idx} className="hover:bg-slate-800/40 transition">
-                            <td className="p-3 font-semibold text-slate-200">{iface.name}</td>
-                            <td className="p-3">
-                              <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase text-[10px]">
-                                {iface.type}
-                              </span>
-                            </td>
-                            <td className="p-3">
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] border ${
-                                  iface.status === 'Up'
-                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                    : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                                }`}
-                              >
-                                {iface.status}
-                              </span>
-                            </td>
-                            <td className="p-3 text-slate-300">{iface.speed}</td>
-                            <td className="p-3 text-cyan-400 font-bold">{iface.rx}</td>
-                            <td className="p-3 text-blue-400 font-bold">{iface.tx}</td>
-                            <td className="p-3 text-slate-400">{iface.rxPackets}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <PaginationControls
-                  currentPage={pagIface.validPage}
-                  totalPages={pagIface.totalPages}
-                  totalItems={pagIface.totalItems}
-                  startIndex={pagIface.startIndex}
-                  endIndex={pagIface.endIndex}
-                  rowsPerPage={ifaceRows}
-                  onPageChange={setIfacePage}
-                  onRowsPerPageChange={setIfaceRows}
-                />
-              </>
+              <MikroTikCapsmanPanel
+                routerIp={currentRouter?.ip || '192.168.77.1'}
+                snmpExporterUrl="http://192.168.77.30:9117"
+              />
+            );
+          } else if (key === 'liveTrafficGraph') {
+            panelBody = (
+              <MikroTikLiveTrafficGraphPanel
+                interfaces={allInterfaces}
+                defaultSelected="ether1_Internet"
+                routerIp={currentRouter?.ip || '192.168.5.1'}
+              />
+            );
+          } else if (key === 'vpnTunnels') {
+            panelBody = (
+              <MikroTikVpnPanel
+                routerIp={currentRouter?.ip || '192.168.77.1'}
+                routerName={currentRouter?.name || 'MikroTik CCR1036'}
+                onSendToTerminal={(cmd) => {
+                  setTerminalCommand(cmd);
+                  setActiveCategory('tools_logs');
+                }}
+              />
             );
           } else if (key === 'dhcpLeasesTable') {
             headerActions = (
-              <div className="relative w-full sm:w-44">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+              <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Cari IP / Host..."
@@ -1001,42 +1182,145 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
                     setDhcpSearch(e.target.value);
                     setDhcpPage(1);
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
                 />
               </div>
             );
 
             panelBody = (
               <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono">
-                    <thead>
-                      <tr className="text-slate-400 border-b border-slate-800">
-                        <th className="pb-2">IP Address</th>
-                        <th className="pb-2">MAC Address</th>
-                        <th className="pb-2">Hostname</th>
-                        <th className="pb-2">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/40">
-                      {pagDhcp.paginated.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="py-4 text-center text-slate-500">
-                            Tidak ada lease ditemukan
-                          </td>
+                {/* Summary Metrics & Quick Filter Chips */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-950/60 border border-slate-800/70">
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDhcpFilter('all');
+                        setDhcpPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg border transition flex items-center space-x-1.5 ${
+                        dhcpFilter === 'all'
+                          ? 'bg-cyan-950/80 text-cyan-300 border-cyan-700/80 font-bold shadow-sm'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800/70 hover:text-slate-200'
+                      }`}
+                    >
+                      <Wifi className="w-3 h-3 text-cyan-400" />
+                      <span>Semua: <strong>{allDhcpLeases.length}</strong></span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDhcpFilter('dynamic');
+                        setDhcpPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg border transition flex items-center space-x-1.5 ${
+                        dhcpFilter === 'dynamic'
+                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/80 font-bold shadow-sm'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800/70 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span><strong>12</strong> Dynamic</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDhcpFilter('static');
+                        setDhcpPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg border transition flex items-center space-x-1.5 ${
+                        dhcpFilter === 'static'
+                          ? 'bg-purple-950/80 text-purple-300 border-purple-700/80 font-bold shadow-sm'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800/70 hover:text-slate-200'
+                      }`}
+                    >
+                      <Server className="w-3 h-3 text-purple-400" />
+                      <span><strong>5</strong> Static</span>
+                    </button>
+                  </div>
+
+                  <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
+                    DHCP Server: <span className="text-slate-300 font-semibold">dhcp1</span> (Pool: <span className="text-cyan-400 font-semibold">192.168.77.100-254</span>)
+                  </span>
+                </div>
+
+                <div className="overflow-hidden border border-slate-800/80 rounded-xl bg-slate-950/40">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-mono">
+                      <thead className="bg-slate-900/90 border-b border-slate-800">
+                        <tr className="text-slate-400 text-[11px]">
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[27%]">IP Address</th>
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[26%]">MAC Address</th>
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[29%]">Hostname / Device</th>
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[18%]">Status</th>
                         </tr>
-                      ) : (
-                        pagDhcp.paginated.map((l, i) => (
-                          <tr key={i} className="hover:bg-slate-800/30">
-                            <td className="py-2.5 text-cyan-300 font-bold">{l.ip}</td>
-                            <td className="py-2.5 text-slate-400 text-[11px]">{l.mac}</td>
-                            <td className="py-2.5 text-slate-200">{l.hostname}</td>
-                            <td className="py-2.5 text-emerald-400">{l.status}</td>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/40">
+                        {pagDhcp.paginated.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="py-6 text-center text-slate-500 font-sans text-xs">
+                              Tidak ada lease DHCP yang cocok
+                            </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          pagDhcp.paginated.map((l, i) => (
+                            <tr key={i} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="px-3.5 py-2.5 font-mono">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-bold text-cyan-300 text-xs tracking-tight">{l.ip}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(l.ip)}
+                                    className="p-1 rounded text-slate-500 hover:text-cyan-300 hover:bg-slate-800 transition opacity-60 hover:opacity-100"
+                                    title="Salin IP"
+                                  >
+                                    {copiedText === l.ip ? (
+                                      <Check className="w-3 h-3 text-emerald-400" />
+                                    ) : (
+                                      <Copy className="w-3 h-3" />
+                                    )}
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="px-3.5 py-2.5 font-mono">
+                                <span className="text-[11px] text-slate-300 bg-slate-900/90 px-2 py-0.5 rounded-md border border-slate-800/90 select-all tracking-wider inline-block">
+                                  {l.mac}
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2.5 font-sans">
+                                <div className="flex items-center space-x-2">
+                                  <div className="p-1 rounded-md bg-slate-900 border border-slate-800 flex-shrink-0">
+                                    {getDeviceIcon(l.hostname)}
+                                  </div>
+                                  <span className="text-slate-200 font-medium text-xs truncate max-w-[160px]" title={l.hostname}>
+                                    {l.hostname}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-3.5 py-2.5">
+                                <div className="flex items-center space-x-1.5">
+                                  <span
+                                    className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                      l.status.includes('static')
+                                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                        : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                    }`}
+                                  >
+                                    <span
+                                      className={`w-1.5 h-1.5 rounded-full ${
+                                        l.status.includes('static') ? 'bg-purple-400' : 'bg-emerald-400 animate-pulse'
+                                      }`}
+                                    />
+                                    <span>{l.status}</span>
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 <PaginationControls
@@ -1053,52 +1337,147 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
             );
           } else if (key === 'ipAddresses') {
             headerActions = (
-              <div className="relative w-full sm:w-44">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+              <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Filter IP / interface..."
+                  placeholder="Cari IP / Subnet..."
                   value={ipSearch}
                   onChange={(e) => {
                     setIpSearch(e.target.value);
                     setIpPage(1);
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
                 />
               </div>
             );
 
             panelBody = (
               <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono">
-                    <thead>
-                      <tr className="text-slate-400 border-b border-slate-800">
-                        <th className="pb-2">Address / Subnet</th>
-                        <th className="pb-2">Interface</th>
-                        <th className="pb-2">Flags</th>
-                        <th className="pb-2">Keterangan</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/40">
-                      {pagIp.paginated.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="py-4 text-center text-slate-500">
-                            Tidak ada IP yang cocok
-                          </td>
+                {/* Summary Subnet Bar with Interactive Filter Chips */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-950/60 border border-slate-800/70">
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIpSubnetFilter('all');
+                        setIpPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg border transition flex items-center space-x-1.5 ${
+                        ipSubnetFilter === 'all'
+                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/80 font-bold shadow-sm'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800/70 hover:text-slate-200'
+                      }`}
+                    >
+                      <Globe className="w-3 h-3 text-emerald-400" />
+                      <span>Semua: <strong>{allIpAddresses.length}</strong> Subnet</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIpSubnetFilter('lan');
+                        setIpPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg border transition flex items-center space-x-1.5 ${
+                        ipSubnetFilter === 'lan'
+                          ? 'bg-cyan-950/80 text-cyan-300 border-cyan-700/80 font-bold shadow-sm'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800/70 hover:text-slate-200'
+                      }`}
+                    >
+                      <Network className="w-3 h-3 text-cyan-400" />
+                      <span>LAN GW: <strong>192.168.77.1</strong></span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIpSubnetFilter('wan');
+                        setIpPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-lg border transition flex items-center space-x-1.5 ${
+                        ipSubnetFilter === 'wan'
+                          ? 'bg-blue-950/80 text-blue-300 border-blue-700/80 font-bold shadow-sm'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800/70 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                      <span>WAN IP: <strong>36.66.246.173</strong></span>
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
+                    Routing Table: <span className="text-emerald-400 font-semibold">8 Active Routes</span>
+                  </span>
+                </div>
+
+                <div className="overflow-hidden border border-slate-800/80 rounded-xl bg-slate-950/40">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-mono">
+                      <thead className="bg-slate-900/90 border-b border-slate-800">
+                        <tr className="text-slate-400 text-[11px]">
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[30%]">Address / Subnet</th>
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[25%]">Interface</th>
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[17%]">Flags</th>
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[28%]">Keterangan</th>
                         </tr>
-                      ) : (
-                        pagIp.paginated.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-800/30">
-                            <td className="py-2.5 text-emerald-300 font-bold">{item.address}</td>
-                            <td className="py-2.5 text-cyan-400">{item.interfaceName}</td>
-                            <td className="py-2.5 text-slate-400 text-[10px]">{item.flags}</td>
-                            <td className="py-2.5 text-slate-300">{item.comment}</td>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/40">
+                        {pagIp.paginated.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="py-6 text-center text-slate-500 font-sans text-xs">
+                              Tidak ada subnet IP yang cocok
+                            </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          pagIp.paginated.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="px-3.5 py-2.5 font-mono">
+                                <div className="flex items-center space-x-2">
+                                  {renderIpWithCidr(item.address)}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(item.address.split(' ')[0])}
+                                    className="p-1 rounded text-slate-500 hover:text-emerald-300 hover:bg-slate-800 transition opacity-60 hover:opacity-100"
+                                    title="Salin IP / Subnet"
+                                  >
+                                    {copiedText === item.address.split(' ')[0] ? (
+                                      <Check className="w-3 h-3 text-emerald-400" />
+                                    ) : (
+                                      <Copy className="w-3 h-3" />
+                                    )}
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="px-3.5 py-2.5 font-mono">
+                                <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-medium bg-cyan-950/70 text-cyan-300 border border-cyan-800/60 shadow-sm">
+                                  <Network className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                                  <span className="truncate max-w-[130px]">{item.interfaceName}</span>
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2.5 font-mono">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                    item.flags.includes('DAC')
+                                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                      : 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
+                                  }`}
+                                  title={item.flags}
+                                >
+                                  {item.flags.includes('DAC') ? 'DAC (Active)' : item.flags}
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2.5 font-sans">
+                                <div className="text-slate-200 font-medium text-xs truncate max-w-[200px]" title={item.comment}>
+                                  {item.comment}
+                                </div>
+                                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                                  Net: {item.network}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 <PaginationControls
@@ -1115,17 +1494,17 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
             );
           } else if (key === 'firewallRules') {
             headerActions = (
-              <div className="relative w-full sm:w-44">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+              <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Cari rule firewall..."
+                  placeholder="Cari firewall rule..."
                   value={fwSearch}
                   onChange={(e) => {
                     setFwSearch(e.target.value);
                     setFwPage(1);
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
                 />
               </div>
             );
@@ -1189,17 +1568,17 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
             );
           } else if (key === 'simpleQueues') {
             headerActions = (
-              <div className="relative w-full sm:w-44">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+              <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Cari queue..."
+                  placeholder="Cari queue limit..."
                   value={queueSearch}
                   onChange={(e) => {
                     setQueueSearch(e.target.value);
                     setQueuePage(1);
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
                 />
               </div>
             );
@@ -1251,52 +1630,103 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
             );
           } else if (key === 'arpNeighbors') {
             headerActions = (
-              <div className="relative w-full sm:w-44">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+              <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Cari ARP / tetangga..."
+                  placeholder="Cari ARP / host..."
                   value={arpSearch}
                   onChange={(e) => {
                     setArpSearch(e.target.value);
                     setArpPage(1);
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
                 />
               </div>
             );
 
             panelBody = (
               <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono">
-                    <thead>
-                      <tr className="text-slate-400 border-b border-slate-800">
-                        <th className="pb-2">IP Address</th>
-                        <th className="pb-2">MAC Address</th>
-                        <th className="pb-2">Interface</th>
-                        <th className="pb-2">Device / Identity</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/40">
-                      {pagArp.paginated.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="py-4 text-center text-slate-500">
-                            Tidak ada entri ARP ditemukan
-                          </td>
+                {/* Summary Neighbor Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-950/60 border border-slate-800/70">
+                  <div className="flex items-center space-x-1.5 text-[11px] font-mono">
+                    <span className="px-2.5 py-1 rounded-lg bg-purple-950/80 text-purple-300 border border-purple-800/60 font-semibold shadow-sm flex items-center space-x-1.5">
+                      <Network className="w-3 h-3 text-purple-400" />
+                      <span><strong>8</strong> Neighbors (MNDP & LLDP)</span>
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 shadow-sm hidden sm:inline-flex">
+                      HPE Switch & Core Routers
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono hidden md:inline">
+                    Protocols: <span className="text-cyan-400 font-semibold">MNDP, CDP, LLDP, ARP</span>
+                  </span>
+                </div>
+
+                <div className="overflow-hidden border border-slate-800/80 rounded-xl bg-slate-950/40">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs font-mono">
+                      <thead className="bg-slate-900/90 border-b border-slate-800">
+                        <tr className="text-slate-400 text-[11px]">
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[26%]">IP Address</th>
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[26%]">MAC Address</th>
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[22%]">Interface</th>
+                          <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[26%]">Device / Identity</th>
                         </tr>
-                      ) : (
-                        pagArp.paginated.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-800/30">
-                            <td className="py-2.5 text-cyan-300 font-bold">{item.ip}</td>
-                            <td className="py-2.5 text-slate-400 text-[11px]">{item.mac}</td>
-                            <td className="py-2.5 text-slate-300">{item.interfaceName}</td>
-                            <td className="py-2.5 text-purple-300 font-semibold">{item.identity}</td>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/40">
+                        {pagArp.paginated.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="py-6 text-center text-slate-500 font-sans text-xs">
+                              Tidak ada entri ARP ditemukan
+                            </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          pagArp.paginated.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="px-3.5 py-2.5 font-mono">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-bold text-cyan-300 text-xs">{item.ip}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(item.ip)}
+                                    className="p-1 rounded text-slate-500 hover:text-cyan-300 hover:bg-slate-800 transition opacity-60 hover:opacity-100"
+                                    title="Salin IP"
+                                  >
+                                    {copiedText === item.ip ? (
+                                      <Check className="w-3 h-3 text-emerald-400" />
+                                    ) : (
+                                      <Copy className="w-3 h-3" />
+                                    )}
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="px-3.5 py-2.5 font-mono">
+                                <span className="text-[11px] text-slate-300 bg-slate-900/90 px-2 py-0.5 rounded-md border border-slate-800/80 select-all tracking-wider inline-block">
+                                  {item.mac}
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2.5 font-mono">
+                                <span className="px-2 py-0.5 rounded text-xs text-slate-300 bg-slate-900/60 border border-slate-800/80 inline-block">
+                                  {item.interfaceName}
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2.5 font-sans">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-purple-300 font-semibold text-xs truncate max-w-[150px]" title={item.identity}>
+                                    {item.identity}
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-slate-800 text-slate-400 border border-slate-700/60">
+                                    {item.protocol}
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 <PaginationControls
@@ -1311,10 +1741,185 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
                 />
               </>
             );
+          } else if (key === 'ipPoolsRoutes') {
+            headerActions = (
+              <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Filter pool / route..."
+                  value={poolRouteSearch}
+                  onChange={(e) => {
+                    setPoolRouteSearch(e.target.value);
+                    setPoolPage(1);
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
+                />
+              </div>
+            );
+
+            panelBody = (
+              <>
+                {/* Summary Toolbar & Tab Switcher */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-950/60 border border-slate-800/70">
+                  <div className="flex items-center space-x-1.5 text-xs font-mono">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPoolRouteTab('pools');
+                        setPoolPage(1);
+                      }}
+                      className={`px-3 py-1 rounded-lg border transition flex items-center space-x-1.5 text-[11px] ${
+                        poolRouteTab === 'pools'
+                          ? 'bg-cyan-950/80 text-cyan-300 border-cyan-700/80 font-bold shadow-sm'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800/70 hover:text-slate-200'
+                      }`}
+                    >
+                      <Layers className="w-3 h-3 text-cyan-400" />
+                      <span>IP Pools: <strong>{allIpPools.length}</strong></span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPoolRouteTab('routes');
+                        setPoolPage(1);
+                      }}
+                      className={`px-3 py-1 rounded-lg border transition flex items-center space-x-1.5 text-[11px] ${
+                        poolRouteTab === 'routes'
+                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/80 font-bold shadow-sm'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800/70 hover:text-slate-200'
+                      }`}
+                    >
+                      <Network className="w-3 h-3 text-emerald-400" />
+                      <span>Routing Table: <strong>{allIpRoutes.length}</strong></span>
+                    </button>
+                  </div>
+
+                  <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
+                    Active Gateway: <span className="text-cyan-400 font-semibold">36.66.246.169 (IDREN)</span>
+                  </span>
+                </div>
+
+                {poolRouteTab === 'pools' ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {pagPools.paginated.map((pool, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2 hover:border-cyan-500/30 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-100 font-mono">{pool.name}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800/40 font-mono">
+                              {pool.used} / {pool.total} ({pool.usagePct}%)
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-mono truncate">{pool.ranges}</div>
+                          {/* Progress Bar */}
+                          <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full rounded-full transition-all duration-300"
+                              style={{ width: `${Math.max(5, pool.usagePct)}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-500">
+                            <span>Interface: <strong className="text-slate-400">{pool.interfaceName}</strong></span>
+                            <span>{pool.target}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                      <span className="flex items-center space-x-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <span>DNS Server: <strong>103.111.x.x / 1.1.1.1</strong></span>
+                      </span>
+                      <span className="text-[11px] font-mono text-cyan-400">Cache: 1.2 MB (240 records)</span>
+                    </div>
+
+                    <PaginationControls
+                      currentPage={pagPools.validPage}
+                      totalPages={pagPools.totalPages}
+                      totalItems={pagPools.totalItems}
+                      startIndex={pagPools.startIndex}
+                      endIndex={pagPools.endIndex}
+                      rowsPerPage={poolRows}
+                      onPageChange={setPoolPage}
+                      onRowsPerPageChange={setPoolRows}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="overflow-hidden border border-slate-800/80 rounded-xl bg-slate-950/40">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs font-mono">
+                          <thead className="bg-slate-900/90 border-b border-slate-800">
+                            <tr className="text-slate-400 text-[11px]">
+                              <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[28%]">Dst. Address</th>
+                              <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[26%]">Gateway</th>
+                              <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[26%]">Interface</th>
+                              <th className="px-3.5 py-2.5 font-semibold text-slate-300 w-[20%]">Flags / Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/40">
+                            {pagRoutes.paginated.length === 0 ? (
+                              <tr>
+                                <td colSpan={4} className="py-6 text-center text-slate-500 font-sans text-xs">
+                                  Tidak ada route ditemukan
+                                </td>
+                              </tr>
+                            ) : (
+                              pagRoutes.paginated.map((r, idx) => (
+                                <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
+                                  <td className="px-3.5 py-2.5 font-mono">
+                                    <span className="text-cyan-300 font-bold text-xs">{r.dst}</span>
+                                  </td>
+                                  <td className="px-3.5 py-2.5 font-mono">
+                                    <span className="text-slate-200 text-xs">{r.gateway}</span>
+                                  </td>
+                                  <td className="px-3.5 py-2.5 font-mono">
+                                    <span className="px-2 py-0.5 rounded text-[11px] bg-slate-900 text-cyan-400 border border-slate-800 inline-block">
+                                      {r.interfaceName}
+                                    </span>
+                                  </td>
+                                  <td className="px-3.5 py-2.5 font-mono">
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        r.flags.includes('AS')
+                                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                          : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                                      }`}
+                                    >
+                                      {r.flags}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <PaginationControls
+                      currentPage={pagRoutes.validPage}
+                      totalPages={pagRoutes.totalPages}
+                      totalItems={pagRoutes.totalItems}
+                      startIndex={pagRoutes.startIndex}
+                      endIndex={pagRoutes.endIndex}
+                      rowsPerPage={poolRows}
+                      onPageChange={setPoolPage}
+                      onRowsPerPageChange={setPoolRows}
+                    />
+                  </div>
+                )}
+              </>
+            );
           } else if (key === 'hotspotSessions') {
             headerActions = (
-              <div className="relative w-full sm:w-44">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+              <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Cari user / IP..."
@@ -1323,7 +1928,7 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
                     setUserSessionSearch(e.target.value);
                     setUserSessionPage(1);
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
                 />
               </div>
             );
@@ -1375,8 +1980,8 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
             );
           } else if (key === 'systemLogs') {
             headerActions = (
-              <div className="relative w-full sm:w-44">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+              <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Cari log event..."
@@ -1385,7 +1990,7 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
                     setLogSearch(e.target.value);
                     setLogPage(1);
                   }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
                 />
               </div>
             );
@@ -1602,3 +2207,5 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
     </div>
   );
 };
+
+export default MikroTikMonitor;

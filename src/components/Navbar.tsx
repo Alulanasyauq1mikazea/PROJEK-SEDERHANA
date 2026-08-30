@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AntLogo } from './AntLogo';
 import {
   Activity,
@@ -16,9 +16,12 @@ import {
   X,
   RefreshCw,
   Clock,
-  ShieldAlert,
   LogOut,
   User,
+  ChevronDown,
+  Shield,
+  Key,
+  Network,
 } from 'lucide-react';
 import { SystemStatus, UserSecurityState } from '../types';
 
@@ -48,16 +51,30 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser = 'daswafx',
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currentTime, setCurrentTime] = React.useState(new Date());
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'mikrotik', label: 'MikroTik Router', icon: Router },
+    { id: 'ruijie', label: 'Ruijie Gateway', icon: Network },
     { id: 'servers', label: 'Servers & VMs', icon: Server },
     { id: 'waf', label: 'WAF Firewall', icon: ShieldCheck },
     { id: 'websites', label: 'Web & SSL', icon: Globe },
@@ -68,96 +85,146 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'config', label: 'Prometheus & Grafana', icon: Sliders },
   ];
 
-  const statusColorMap = {
-    online: { bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-500', label: 'System Normal' },
-    warning: { bg: 'bg-amber-500/10 text-amber-400 border-amber-500/20', dot: 'bg-amber-500 animate-pulse', label: '2 Warnings Active' },
-    critical: { bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20', dot: 'bg-rose-500 animate-ping', label: 'Critical Action Needed' },
-    offline: { bg: 'bg-gray-500/10 text-gray-400 border-gray-500/20', dot: 'bg-gray-500', label: 'Offline Mode' },
-  };
-
-  const statusStyle = statusColorMap[systemStatus] || statusColorMap.online;
-
   return (
-    <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800 text-slate-100">
+    <header className="sticky top-0 z-40 bg-[#0f172a]/90 backdrop-blur-md border-b border-slate-800 text-slate-300 font-mono">
       {/* Top Banner Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+      <div className="w-full px-4 sm:px-6">
+        <div className="flex items-center justify-between h-14 gap-4">
           
-          {/* Logo & Platform Info */}
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30">
-              <AntLogo className="w-6 h-6 text-cyan-200 animate-pulse" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-bold text-lg tracking-tight text-slate-100">NetWatch<span className="text-cyan-400">Pro</span></span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono border border-slate-700">Ubuntu 24.04 + Nginx</span>
+          {/* Logo & Platform Info (High Density Brand) */}
+          <div className="flex items-center gap-4 min-w-0 shrink-0">
+            <div className="flex items-center gap-2.5 cursor-pointer">
+              <div className="w-3 h-3 bg-cyan-400 rounded-xs shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-cyan-400 font-black text-lg tracking-tighter leading-none">
+                    NETWACH
+                  </span>
+                  <span className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] rounded bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono uppercase tracking-wider">
+                    PRO
+                  </span>
+                </div>
+                <span className="text-[9px] text-slate-500 tracking-[0.2em] uppercase leading-tight mt-0.5">
+                  Network Sentinel v2.4.0
+                </span>
               </div>
-              <p className="text-xs text-slate-400 hidden sm:block">Unified Monitoring • Prometheus • SNMP • InfluxDB</p>
+            </div>
+
+            {/* Session & Telemetry Status (Desktop High Density) */}
+            <div className="hidden lg:flex items-center gap-4 pl-4 border-l border-slate-800 text-[11px]">
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-500 text-[10px] uppercase tracking-wider">Session:</span>
+                <span className="text-slate-200 text-xs font-mono font-medium">ALPHA_PROD_99</span>
+              </div>
+              <div className="w-px h-3.5 bg-slate-800"></div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-500 text-[10px] uppercase tracking-wider">Clock:</span>
+                <span className="text-slate-200 text-xs font-mono font-medium">{currentTime.toLocaleTimeString()}</span>
+              </div>
             </div>
           </div>
 
           {/* Right Status Controls */}
-          <div className="hidden md:flex items-center space-x-3">
-            {/* Global System Health Indicator */}
-            <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border text-xs font-medium ${statusStyle.bg}`}>
-              <span className={`w-2 h-2 rounded-full ${statusStyle.dot}`}></span>
-              <span>{statusStyle.label}</span>
+          <div className="hidden md:flex items-center gap-2.5 shrink-0">
+            {/* GitHub Sync Status Badge */}
+            <div className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] rounded font-mono flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>SYNCED WITH GITHUB</span>
             </div>
 
             {/* 2FA Status Pill */}
             <button
               onClick={onOpen2FAModal}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
+              className={`h-8 inline-flex items-center gap-1.5 px-2.5 rounded border text-[11px] font-mono whitespace-nowrap transition ${
                 userSecurity.is2FAEnabled
-                  ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300 hover:bg-emerald-900/50'
-                  : 'bg-amber-950/40 border-amber-800/60 text-amber-300 hover:bg-amber-900/50'
+                  ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300 hover:bg-emerald-900/40'
+                  : 'bg-amber-950/40 border-amber-800/60 text-amber-300 hover:bg-amber-900/40'
               }`}
+              title="2-Factor Authentication Status"
             >
-              <Lock className="w-3.5 h-3.5" />
-              <span>{userSecurity.is2FAEnabled ? '2FA Enabled' : 'Enable 2FA'}</span>
+              <Lock className="w-3 h-3 shrink-0" />
+              <span>{userSecurity.is2FAEnabled ? '2FA: ON' : '2FA: OFF'}</span>
             </button>
 
-            {/* Logged in User Profile & Role Badge */}
-            <div className="flex items-center space-x-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 text-xs font-mono">
-              <User className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-slate-200 font-bold">{currentUser}</span>
-              <span
-                className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
-                  userSecurity.userRole === 'Viewer'
-                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                    : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
-                }`}
-              >
-                {userSecurity.userRole === 'Viewer' ? 'Viewer (Read-Only)' : 'Super Admin'}
-              </span>
-            </div>
-
-            {onLogout && (
+            {/* Logged in User Profile Dropdown Capsule */}
+            <div className="relative" ref={dropdownRef}>
               <button
-                onClick={onLogout}
-                className="flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900 text-rose-300 border border-rose-800/60 text-xs font-medium transition"
-                title="Keluar / Logout"
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                className="h-8 inline-flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700/80 px-2.5 rounded border border-slate-700 hover:border-cyan-500/50 text-xs font-mono whitespace-nowrap transition cursor-pointer"
+                title="Akun Pengguna & Opsi Keluar"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Logout</span>
+                <div className="w-4 h-4 rounded-xs bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold">
+                  {currentUser.substring(0, 2).toUpperCase()}
+                </div>
+                <span className="text-slate-200 font-medium">{currentUser}</span>
+                <span
+                  className={`px-1 py-0.2 rounded text-[9px] font-bold border ${
+                    userSecurity.userRole === 'Viewer'
+                      ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                      : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                  }`}
+                >
+                  {userSecurity.userRole === 'Viewer' ? 'VIEW' : 'ADMIN'}
+                </span>
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${userDropdownOpen ? 'rotate-180 text-cyan-400' : ''}`} />
               </button>
-            )}
 
-            {/* Live Clock */}
-            <div className="hidden lg:flex items-center space-x-1.5 text-xs text-slate-400 font-mono bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
-              <Clock className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{currentTime.toLocaleTimeString()}</span>
+              {/* User Dropdown Menu */}
+              {userDropdownOpen && (
+                <div className="absolute right-0 mt-1.5 w-56 bg-[#0f172a] border border-slate-700 rounded p-2 shadow-2xl backdrop-blur-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 font-mono">
+                  <div className="px-3 py-2 border-b border-slate-800 mb-1">
+                    <div className="text-[9px] uppercase tracking-wider text-slate-500">Logged in as</div>
+                    <div className="text-xs font-bold text-slate-100 truncate">{currentUser}</div>
+                    <div className="inline-flex items-center gap-1 mt-1 text-[10px] text-cyan-400">
+                      <Shield className="w-3 h-3 text-cyan-400" />
+                      <span>{userSecurity.userRole === 'Viewer' ? 'Viewer Mode' : 'Super Admin'}</span>
+                    </div>
+                  </div>
+
+                  {/* 2FA Option */}
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      onOpen2FAModal();
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-slate-300 hover:text-cyan-300 hover:bg-slate-800 rounded transition text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Key className="w-3 h-3 text-slate-400" />
+                      <span>Two-Factor Auth</span>
+                    </div>
+                    <span className={`text-[9px] font-bold ${userSecurity.is2FAEnabled ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {userSecurity.is2FAEnabled ? 'ACTIVE' : 'OFF'}
+                    </span>
+                  </button>
+
+                  <div className="my-1 border-t border-slate-800"></div>
+
+                  {/* Logout Button */}
+                  {onLogout && (
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 rounded transition text-left group"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-400 group-hover:translate-x-0.5 transition-transform" />
+                      <span>Keluar (Logout)</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Refresh Button */}
             <button
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition disabled:opacity-50"
+              className="h-8 w-8 inline-flex items-center justify-center rounded bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition disabled:opacity-50 shrink-0"
               title="Refresh Telemetry Data"
             >
-              <RefreshCw className={`w-4 h-4 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
           </div>
 
@@ -166,15 +233,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="p-2 rounded-lg bg-slate-900 text-slate-300 border border-slate-800"
+              className="p-1.5 rounded bg-slate-800 text-slate-300 border border-slate-700"
             >
-              <RefreshCw className={`w-4 h-4 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-800 focus:outline-none"
+              className="p-1.5 rounded bg-slate-800 text-slate-300 border border-slate-700 focus:outline-none"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
         </div>
@@ -182,20 +249,27 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-slate-950 border-b border-slate-800 px-4 pt-2 pb-4 space-y-2">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-900">
-            <div className={`flex items-center space-x-2 px-3 py-1 rounded-full border text-xs font-medium ${statusStyle.bg}`}>
-              <span className={`w-2 h-2 rounded-full ${statusStyle.dot}`}></span>
-              <span>{statusStyle.label}</span>
+        <div className="md:hidden bg-[#0f172a] border-b border-slate-800 px-4 pt-2 pb-4 space-y-2 font-mono">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div className="flex items-center space-x-2">
+              <User className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-xs font-bold text-slate-200">{currentUser}</span>
+              <span className="text-[9px] px-1.5 py-0.2 bg-cyan-500/20 text-cyan-300 rounded font-bold">
+                {userSecurity.userRole}
+              </span>
             </div>
-            <button
-              onClick={onOpen2FAModal}
-              className={`px-3 py-1 rounded-lg border text-xs font-medium ${
-                userSecurity.is2FAEnabled ? 'bg-emerald-950 text-emerald-300' : 'bg-amber-950 text-amber-300'
-              }`}
-            >
-              2FA: {userSecurity.is2FAEnabled ? 'ON' : 'OFF'}
-            </button>
+            {onLogout && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onLogout();
+                }}
+                className="px-2.5 py-1 rounded border border-rose-800/60 bg-rose-950/40 text-rose-300 text-xs font-semibold flex items-center gap-1"
+              >
+                <LogOut className="w-3 h-3" />
+                <span>Logout</span>
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-1.5 pt-2">
@@ -209,14 +283,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setActiveTab(item.id);
                     setMobileMenuOpen(false);
                   }}
-                  className={`flex items-center space-x-2 px-3 py-2.5 rounded-lg text-xs font-medium text-left transition ${
+                  className={`flex items-center space-x-2 px-2.5 py-2 rounded text-xs font-medium text-left transition ${
                     isActive
-                      ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-                      : 'text-slate-300 bg-slate-900/60 border border-slate-800/80'
+                      ? 'bg-slate-800 text-cyan-400 border border-slate-700'
+                      : 'text-slate-300 bg-slate-900/60 border border-slate-800'
                   }`}
                 >
-                  <Icon className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                  <span className="truncate">{item.label}</span>
+                  <Icon className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                  <span className="truncate text-[11px]">{item.label}</span>
                 </button>
               );
             })}
@@ -226,3 +300,5 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+
+export default Navbar;

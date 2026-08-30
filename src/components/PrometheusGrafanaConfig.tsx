@@ -9,15 +9,19 @@ import {
   Code,
   FileCode,
   Zap,
+  Target,
+  BookOpen
 } from 'lucide-react';
+import { PrometheusTargetManager } from './PrometheusTargetManager';
 
 export const PrometheusGrafanaConfig: React.FC = () => {
+  const [activeSubTab, setActiveSubTab] = useState<'targets' | 'deployment'>('targets');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
-  const pm2DeployCommands = `# 1. Download/Upload NetWatch Source Code to Server
+  const pm2DeployCommands = `# 1. Download/Upload OmniGuard-Live Source Code to Server
 cd /var/www
-# Git clone or unzip NetWatch project here
-cd netwatch-pro
+# Git clone or unzip OmniGuard-Live project here
+cd omniguard-live
 
 # 2. Install Node Dependencies & Build Production Bundle
 npm install
@@ -28,19 +32,19 @@ cp .env.example .env
 # Edit .env with nano or vim to set TELEGRAM_BOT_TOKEN, SMTP, etc.
 # nano .env
 
-# 4. Start NetWatch Node.js Backend Server with PM2
-pm2 start dist/server.cjs --name "netwatch-pro"
+# 4. Start OmniGuard-Live Node.js Backend Server with PM2
+pm2 start dist/server.cjs --name "omniguard-live"
 pm2 save
 pm2 startup
 
 # 5. Check Running Status
 pm2 status
-pm2 logs netwatch-pro`;
+pm2 logs omniguard-live`;
 
-  const nginxConfigSnippet = `# /etc/nginx/sites-available/netwatch
+  const nginxConfigSnippet = `# /etc/nginx/sites-available/omniguard-live
 server {
     listen 80;
-    server_name netwatch.unmus.ac.id; # Ubah dengan Domain / IP Server Anda
+    server_name omniguard.unmus.ac.id; # Ubah dengan Domain / IP Server Anda
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -55,7 +59,7 @@ server {
 }
 
 # Aktifkan konfigurasi & reload Nginx
-# sudo ln -s /etc/nginx/sites-available/netwatch /etc/nginx/sites-enabled/
+# sudo ln -s /etc/nginx/sites-available/omniguard-live /etc/nginx/sites-enabled/
 # sudo nginx -t
 # sudo systemctl reload nginx`;
 
@@ -77,15 +81,15 @@ sudo systemctl enable --now grafana-server`;
   const mariaDbCommands = `# 1. Login ke MariaDB / MySQL Server di Ubuntu 24.04
 sudo mysql -u root -p
 
-# 2. Buat Database netwatch_db & User Khusus NetWatch
-CREATE DATABASE IF NOT EXISTS netwatch_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS 'netwatch_user'@'localhost' IDENTIFIED BY 'PasswordStrong123!';
-GRANT ALL PRIVILEGES ON netwatch_db.* TO 'netwatch_user'@'localhost';
+# 2. Buat Database omniguard_db & User Khusus OmniGuard
+CREATE DATABASE IF NOT EXISTS omniguard_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'omniguard_user'@'localhost' IDENTIFIED BY 'PasswordStrong123!';
+GRANT ALL PRIVILEGES ON omniguard_db.* TO 'omniguard_user'@'localhost';
 FLUSH PRIVILEGES;
 
 # 3. Import Skema Tabel Users & Audit Logs ke MariaDB
-mysql -u netwatch_user -pnetwatch_db < /var/www/netwatch/schema.sql
-# Atau jalankan otomatis via NetWatch backend API: curl http://localhost:3000/api/auth/db-schema`;
+mysql -u omniguard_user -pomniguard_db < /var/www/omniguard-live/schema.sql
+# Atau jalankan otomatis via OmniGuard backend API: curl http://localhost:3000/api/auth/db-schema`;
 
   const copyToClipboard = (text: string, index: number) => {
     navigator.clipboard.writeText(text);
@@ -95,44 +99,75 @@ mysql -u netwatch_user -pnetwatch_db < /var/www/netwatch/schema.sql
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-            <Sliders className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-slate-100">Panduan Deployment Ubuntu 24.04, PM2 & Nginx</h2>
-            <p className="text-xs text-slate-400">Instruksi lengkap penerapan aplikasi NetWatch Pro pada server Ubuntu 24.04 LTS Anda</p>
-          </div>
-        </div>
+      {/* Sub-Tab Selector Navigation */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+        <button
+          onClick={() => setActiveSubTab('targets')}
+          className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition ${
+            activeSubTab === 'targets'
+              ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg shadow-orange-950/40'
+              : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
+          }`}
+        >
+          <Target className="w-4 h-4" />
+          <span>Integrasi Target & Metrik Prometheus (192.168.77.30:9090)</span>
+        </button>
 
-        <div className="flex items-center space-x-2">
-          <a
-            href="/api/config/prometheus"
-            download="prometheus.yml"
-            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-medium flex items-center space-x-1.5 transition"
-          >
-            <Download className="w-4 h-4" />
-            <span>Download prometheus.yml</span>
-          </a>
-          <a
-            href="/api/config/grafana"
-            download="grafana_dashboard.json"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-medium flex items-center space-x-1.5 transition"
-          >
-            <Download className="w-4 h-4" />
-            <span>Download Grafana JSON</span>
-          </a>
-        </div>
+        <button
+          onClick={() => setActiveSubTab('deployment')}
+          className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition ${
+            activeSubTab === 'deployment'
+              ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-950/40'
+              : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800'
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          <span>Panduan Deployment Ubuntu 24.04 & PM2</span>
+        </button>
       </div>
+
+      {activeSubTab === 'targets' ? (
+        <PrometheusTargetManager />
+      ) : (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                <Sliders className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-100">Panduan Deployment Ubuntu 24.04, PM2 & Nginx</h2>
+                <p className="text-xs text-slate-400">Instruksi lengkap penerapan aplikasi OmniGuard-Live pada server Ubuntu 24.04 LTS Anda</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <a
+                href="/api/config/prometheus"
+                download="prometheus.yml"
+                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-medium flex items-center space-x-1.5 transition"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download prometheus.yml</span>
+              </a>
+              <a
+                href="/api/config/grafana"
+                download="grafana_dashboard.json"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-medium flex items-center space-x-1.5 transition"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Grafana JSON</span>
+              </a>
+            </div>
+          </div>
 
       {/* Step 1: PM2 Node Deployment */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-slate-800">
           <h3 className="text-base font-semibold text-slate-100 flex items-center space-x-2">
             <Zap className="w-4 h-4 text-cyan-400" />
-            <span>Langkah 1: Jalankan NetWatch dengan PM2 Node Manager</span>
+            <span>Langkah 1: Jalankan OmniGuard-Live dengan PM2 Node Manager</span>
           </h3>
           <button
             onClick={() => copyToClipboard(pm2DeployCommands, 1)}
@@ -174,7 +209,7 @@ mysql -u netwatch_user -pnetwatch_db < /var/www/netwatch/schema.sql
         <div className="flex items-center justify-between pb-2 border-b border-slate-800">
           <h3 className="text-base font-semibold text-slate-100 flex items-center space-x-2">
             <Code className="w-4 h-4 text-purple-400" />
-            <span>Langkah 3: Konfigurasi Database MariaDB / MySQL (`netwatch_db`)</span>
+            <span>Langkah 3: Konfigurasi Database MariaDB / MySQL (`omniguard_db`)</span>
           </h3>
           <button
             onClick={() => copyToClipboard(mariaDbCommands, 3)}
@@ -211,6 +246,10 @@ mysql -u netwatch_user -pnetwatch_db < /var/www/netwatch/schema.sql
         </div>
       </div>
     </div>
-  );
+  )}
+</div>
+);
 };
+
+export default PrometheusGrafanaConfig;
 

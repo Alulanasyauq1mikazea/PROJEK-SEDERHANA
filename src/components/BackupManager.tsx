@@ -32,7 +32,7 @@ export const BackupManager: React.FC<BackupManagerProps> = ({ backups, onTrigger
     if (isReadOnly) return;
     setIsGenerating(true);
     setTimeout(() => {
-      onTriggerBackup(backupTitle || 'Manual NetWatch System Snapshot', targetType);
+      onTriggerBackup(backupTitle || 'Manual OmniGuard-Live System Snapshot', targetType);
       setBackupTitle('');
       setIsGenerating(false);
     }, 1200);

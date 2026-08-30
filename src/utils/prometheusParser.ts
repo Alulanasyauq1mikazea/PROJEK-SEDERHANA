@@ -1,11 +1,11 @@
 export function parsePrometheusText(
-  text: string, 
-  existingMonitorsMap: Record = {}
+  text: string,
+  existingMonitorsMap: Record<string, any> = {}
 ): any[] {
   if (!text || typeof text !== 'string') return [];
 
   const lines = text.split('\n');
-  const map: Record = {};
+  const map: Record<string, any> = {};
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -18,7 +18,7 @@ export function parsePrometheusText(
     const labelsRaw = match[2];
     const value = parseFloat(match[3]);
 
-    const labels: Record = {};
+    const labels: Record<string, any> = {};
     const labelMatches = labelsRaw.matchAll(/([a-zA-Z0-9_]+)="([^"]*)"/g);
     for (const lm of labelMatches) {
       labels[lm[1]] = lm[2];

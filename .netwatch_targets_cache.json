@@ -1,0 +1,572 @@
+{
+  "lastSync": "2026-08-30T07:54:31.465Z",
+  "count": 24,
+  "targets": [
+    {
+      "scrapeDuration": "11.44ms",
+      "installedOnTarget": true,
+      "mappedModule": "system",
+      "mappedNodeName": "Blackbox Exporter Network Probe",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "exporterType": "Blackbox Exporter v0.25.0",
+      "lastScrape": "12.247s ago",
+      "state": "UP",
+      "endpoint": "http://localhost:9115/probe",
+      "id": "tgt-1",
+      "selectedMetrics": [
+        "probe_success",
+        "probe_http_status_code",
+        "probe_duration_seconds"
+      ],
+      "healthReason": "",
+      "labels": {
+        "instance": "http://192.168.77.100",
+        "module": "http_2xx_or_3xx",
+        "job": "blackbox-http",
+        "target": "http://192.168.77.100"
+      },
+      "job": "blackbox-http",
+      "isPaused": false
+    },
+    {
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "installedOnTarget": false,
+      "labels": {
+        "instance": "10.10.0.20:9100",
+        "job": "siakad-app-core"
+      },
+      "state": "PENDING_INSTALL",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "healthReason": "",
+      "scrapeDuration": "0ms",
+      "mappedModule": "server",
+      "mappedNodeName": "SIAKAD Core Application VM",
+      "job": "siakad-app-core",
+      "isPaused": false,
+      "id": "tgt-10",
+      "endpoint": "http://10.10.0.20:9100/metrics",
+      "exporterType": "Node Exporter (Pending Install)",
+      "lastScrape": "Never (Exporter missing)"
+    },
+    {
+      "exporterType": "MySQL Exporter (Pending Install)",
+      "lastScrape": "Never (Exporter missing)",
+      "mappedNodeName": "MySQL Master Database Server",
+      "mappedModule": "server",
+      "selectedMetrics": [
+        "mysql_global_status_queries",
+        "mysql_global_status_threads_connected"
+      ],
+      "scrapeDuration": "0ms",
+      "installedOnTarget": false,
+      "endpoint": "http://10.10.0.30:9104/metrics",
+      "healthReason": "",
+      "labels": {
+        "instance": "10.10.0.30:9104",
+        "job": "mysql-master-db01"
+      },
+      "job": "mysql-master-db01",
+      "id": "tgt-11",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "isPaused": false,
+      "state": "PENDING_INSTALL"
+    },
+    {
+      "exporterType": "CrowdSec Prometheus Bouncer",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "installedOnTarget": true,
+      "state": "UP",
+      "mappedModule": "waf",
+      "labels": {
+        "instance": "192.168.77.77:6060",
+        "job": "crowdsec"
+      },
+      "id": "tgt-2",
+      "job": "crowdsec",
+      "isPaused": false,
+      "selectedMetrics": [
+        "crowdsec_decisions",
+        "crowdsec_lapi_requests_total",
+        "crowdsec_active_alerts"
+      ],
+      "healthReason": "",
+      "scrapeDuration": "85.26ms",
+      "lastScrape": "9.352s ago",
+      "mappedNodeName": "CrowdSec LAPI WAF Engine",
+      "endpoint": "http://192.168.77.77:6060/metrics"
+    },
+    {
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "mappedNodeName": "MikroTik CCR1036-12G-4S (Master)",
+      "endpoint": "http://192.168.77.30:9117/snmp",
+      "healthReason": "",
+      "scrapeDuration": "2.683s",
+      "state": "UP",
+      "labels": {
+        "instance": "192.168.77.1",
+        "module": "mikrotik",
+        "job": "mikrotik",
+        "target": "192.168.77.1"
+      },
+      "id": "tgt-3",
+      "lastScrape": "12.72s ago",
+      "isPaused": false,
+      "selectedMetrics": [
+        "snmp_mikrotik_interface_rx_bytes",
+        "snmp_mikrotik_cpu_load",
+        "snmp_mikrotik_active_dhcp"
+      ],
+      "job": "mikrotik",
+      "exporterType": "SNMP Exporter v0.26.0",
+      "installedOnTarget": true,
+      "mappedModule": "mikrotik"
+    },
+    {
+      "scrapeDuration": "2.122ms",
+      "exporterType": "Nginx Prometheus Exporter v1.1.0",
+      "id": "tgt-4",
+      "mappedNodeName": "Nginx ModSecurity Reverse Proxy",
+      "isPaused": false,
+      "mappedModule": "waf",
+      "job": "nginx-reverse-proxy",
+      "endpoint": "http://192.168.77.77:9113/metrics",
+      "lastScrape": "13.935s ago",
+      "installedOnTarget": true,
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "healthReason": "",
+      "state": "UP",
+      "labels": {
+        "instance": "192.168.77.77:9113",
+        "job": "nginx-reverse-proxy"
+      },
+      "selectedMetrics": [
+        "nginx_http_requests_total",
+        "nginx_connections_active",
+        "nginx_upstream_response_time"
+      ]
+    },
+    {
+      "scrapeDuration": "58.34ms",
+      "exporterType": "Node Exporter v1.8.0",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes",
+        "node_filesystem_free_bytes"
+      ],
+      "mappedNodeName": "PVE-Node-01 Master Host",
+      "lastScrape": "10.684s ago",
+      "mappedModule": "server",
+      "job": "node",
+      "id": "tgt-5",
+      "endpoint": "http://localhost:9100/metrics",
+      "healthReason": "",
+      "isPaused": false,
+      "state": "UP",
+      "labels": {
+        "instance": "localhost:9100",
+        "job": "node"
+      },
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "installedOnTarget": true
+    },
+    {
+      "lastScrape": "3.219s ago",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "endpoint": "http://localhost:9100/metrics",
+      "job": "node_exporter",
+      "isPaused": false,
+      "scrapeDuration": "58.44ms",
+      "healthReason": "",
+      "mappedNodeName": "Local NetWatch App Node",
+      "selectedMetrics": [
+        "node_load1",
+        "node_disk_read_bytes_total",
+        "node_network_receive_bytes_total"
+      ],
+      "mappedModule": "server",
+      "labels": {
+        "instance": "localhost:9100",
+        "job": "node_exporter"
+      },
+      "installedOnTarget": true,
+      "id": "tgt-6",
+      "state": "UP",
+      "exporterType": "Node Exporter v1.8.0"
+    },
+    {
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "labels": {
+        "instance": "localhost:9090",
+        "job": "prometheus"
+      },
+      "mappedModule": "system",
+      "selectedMetrics": [
+        "prometheus_tsdb_head_samples_appended_total",
+        "prometheus_target_scrapes_sample_out_of_order_total"
+      ],
+      "installedOnTarget": true,
+      "job": "prometheus",
+      "id": "tgt-7",
+      "exporterType": "Prometheus Native Metrics",
+      "state": "UP",
+      "scrapeDuration": "4.015ms",
+      "isPaused": false,
+      "mappedNodeName": "Prometheus Time Series Server",
+      "lastScrape": "2.162s ago",
+      "endpoint": "http://localhost:9090/metrics",
+      "healthReason": ""
+    },
+    {
+      "id": "tgt-8",
+      "mappedModule": "website",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "labels": {
+        "instance": "192.168.77.30:3001",
+        "job": "uptime-kuma-local"
+      },
+      "exporterType": "Uptime Kuma Prometheus Endpoint",
+      "lastScrape": "81ms ago",
+      "job": "uptime-kuma-local",
+      "installedOnTarget": true,
+      "scrapeDuration": "81.93ms",
+      "selectedMetrics": [
+        "monitor_status",
+        "monitor_response_time",
+        "monitor_cert_days_remaining"
+      ],
+      "mappedNodeName": "Uptime Kuma Health Check Engine (192.168.77.30:3001)",
+      "isPaused": false,
+      "endpoint": "http://192.168.77.30:3001/metrics",
+      "healthReason": "",
+      "state": "UP"
+    },
+    {
+      "endpoint": "http://192.168.77.11:9100/metrics",
+      "id": "tgt-9",
+      "healthReason": "",
+      "job": "pve-node-02",
+      "state": "PENDING_INSTALL",
+      "installedOnTarget": false,
+      "isPaused": false,
+      "exporterType": "Node Exporter (Pending Install)",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "scrapeDuration": "0ms",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "labels": {
+        "instance": "192.168.77.11:9100",
+        "job": "pve-node-02"
+      },
+      "lastScrape": "Never (Exporter missing)",
+      "mappedNodeName": "PVE-Server - Dekanat",
+      "mappedModule": "server"
+    },
+    {
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "mappedNodeName": "BLACKBOX-HTTP Node",
+      "healthReason": "",
+      "endpoint": "http://localhost:9115/probe?module=http_2xx_or_3xx&target=http%3A%2F%2F192.168.77.100",
+      "scrapeDuration": "6.31ms",
+      "state": "UP",
+      "id": "tgt-blackbox-http-0",
+      "labels": {
+        "instance": "http://192.168.77.100",
+        "job": "blackbox-http"
+      },
+      "lastScrape": "13s ago",
+      "isPaused": false,
+      "selectedMetrics": [
+        "probe_success",
+        "probe_http_status_code",
+        "probe_duration_seconds"
+      ],
+      "exporterType": "Prometheus Exporter",
+      "job": "blackbox-http",
+      "installedOnTarget": true,
+      "mappedModule": "system"
+    },
+    {
+      "state": "UP",
+      "isPaused": false,
+      "id": "tgt-crowdsec-1",
+      "job": "crowdsec",
+      "lastScrape": "10s ago",
+      "healthReason": "",
+      "installedOnTarget": true,
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "endpoint": "http://192.168.77.77:6060/metrics",
+      "labels": {
+        "instance": "192.168.77.77:6060",
+        "job": "crowdsec"
+      },
+      "mappedModule": "waf",
+      "mappedNodeName": "CROWDSEC Node",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "scrapeDuration": "80.54ms",
+      "exporterType": "Prometheus Exporter"
+    },
+    {
+      "endpoint": "http://192.168.77.30:9117/snmp?module=mikrotik&target=192.168.77.1",
+      "exporterType": "Prometheus Exporter",
+      "labels": {
+        "instance": "192.168.77.1",
+        "job": "mikrotik"
+      },
+      "mappedModule": "mikrotik",
+      "id": "tgt-mikrotik-2",
+      "lastScrape": "14s ago",
+      "isPaused": false,
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "state": "UP",
+      "installedOnTarget": true,
+      "job": "mikrotik",
+      "healthReason": "",
+      "scrapeDuration": "6161.92ms",
+      "mappedNodeName": "MIKROTIK Node"
+    },
+    {
+      "scrapeDuration": "2.52ms",
+      "mappedModule": "server",
+      "mappedNodeName": "NGINX-REVERSE-PROXY Node",
+      "isPaused": false,
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "endpoint": "http://192.168.77.77:9113/metrics",
+      "exporterType": "Prometheus Exporter",
+      "state": "UP",
+      "labels": {
+        "instance": "192.168.77.77:9113",
+        "job": "nginx-reverse-proxy"
+      },
+      "id": "tgt-nginx-reverse-proxy-3",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "job": "nginx-reverse-proxy",
+      "lastScrape": "15s ago",
+      "installedOnTarget": true,
+      "healthReason": ""
+    },
+    {
+      "mappedNodeName": "NODE_EXPORTER Node",
+      "id": "tgt-node_exporter-5",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "healthReason": "",
+      "scrapeDuration": "58.82ms",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "labels": {
+        "instance": "localhost:9100",
+        "job": "node_exporter"
+      },
+      "exporterType": "Prometheus Exporter",
+      "job": "node_exporter",
+      "endpoint": "http://localhost:9100/metrics",
+      "state": "UP",
+      "mappedModule": "server",
+      "installedOnTarget": true,
+      "lastScrape": "4s ago",
+      "isPaused": false
+    },
+    {
+      "state": "UP",
+      "labels": {
+        "instance": "localhost:9100",
+        "job": "node"
+      },
+      "scrapeDuration": "57.98ms",
+      "lastScrape": "12s ago",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "mappedNodeName": "NODE Node",
+      "healthReason": "",
+      "job": "node",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "mappedModule": "server",
+      "endpoint": "http://localhost:9100/metrics",
+      "id": "tgt-node-4",
+      "isPaused": false,
+      "exporterType": "Prometheus Exporter",
+      "installedOnTarget": true
+    },
+    {
+      "isPaused": false,
+      "mappedNodeName": "PROMETHEUS Node",
+      "exporterType": "Prometheus Exporter",
+      "scrapeDuration": "4.29ms",
+      "installedOnTarget": true,
+      "mappedModule": "server",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "endpoint": "http://localhost:9090/metrics",
+      "id": "tgt-prometheus-6",
+      "lastScrape": "3s ago",
+      "healthReason": "",
+      "state": "UP",
+      "labels": {
+        "instance": "localhost:9090",
+        "job": "prometheus"
+      },
+      "job": "prometheus",
+      "updatedAt": "2026-08-30T07:38:46.324Z"
+    },
+    {
+      "mappedNodeName": "PROXMOX_DEKANAT Node",
+      "mappedModule": "server",
+      "scrapeDuration": "485.27ms",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "lastScrape": "12s ago",
+      "exporterType": "Prometheus Exporter",
+      "id": "tgt-proxmox_Dekanat-7",
+      "labels": {
+        "instance": "192.168.77.29",
+        "job": "proxmox_Dekanat"
+      },
+      "state": "UP",
+      "isPaused": false,
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "installedOnTarget": true,
+      "job": "proxmox_Dekanat",
+      "endpoint": "http://192.168.77.29:9221/pve?module=default&target=192.168.77.29",
+      "healthReason": ""
+    },
+    {
+      "scrapeDuration": "301.14ms",
+      "id": "tgt-proxmox_lab-TI-10",
+      "state": "UP",
+      "mappedModule": "server",
+      "mappedNodeName": "PROXMOX_LAB-TI Node",
+      "installedOnTarget": true,
+      "exporterType": "Prometheus Exporter",
+      "isPaused": false,
+      "labels": {
+        "instance": "192.168.14.222",
+        "job": "proxmox_lab-TI"
+      },
+      "lastScrape": "12s ago",
+      "job": "proxmox_lab-TI",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "healthReason": "",
+      "endpoint": "http://192.168.14.222:9221/pve?module=default&target=192.168.14.222"
+    },
+    {
+      "endpoint": "http://127.0.0.1:9221/pve?module=pve_simlitabmas&target=192.168.77.99",
+      "state": "UP",
+      "installedOnTarget": true,
+      "id": "tgt-proxmox_Simlitabmas-8",
+      "exporterType": "Prometheus Exporter",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "lastScrape": "3s ago",
+      "isPaused": false,
+      "mappedModule": "server",
+      "labels": {
+        "instance": "192.168.77.99",
+        "job": "proxmox_Simlitabmas"
+      },
+      "healthReason": "",
+      "job": "proxmox_Simlitabmas",
+      "mappedNodeName": "PROXMOX_SIMLITABMAS Node",
+      "scrapeDuration": "134.43ms",
+      "updatedAt": "2026-08-30T07:38:46.324Z"
+    },
+    {
+      "state": "UP",
+      "mappedModule": "server",
+      "selectedMetrics": [
+        "node_cpu_seconds_total",
+        "node_memory_MemTotal_bytes"
+      ],
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "exporterType": "Prometheus Exporter",
+      "id": "tgt-proxmox_Teknik-9",
+      "installedOnTarget": true,
+      "isPaused": false,
+      "scrapeDuration": "211.07ms",
+      "job": "proxmox_Teknik",
+      "mappedNodeName": "PROXMOX_TEKNIK Node",
+      "healthReason": "",
+      "labels": {
+        "instance": "192.168.77.242",
+        "job": "proxmox_Teknik"
+      },
+      "lastScrape": "8s ago",
+      "endpoint": "http://127.0.0.1:9221/pve?module=default&target=192.168.77.242"
+    },
+    {
+      "mappedNodeName": "UPTIME-KUMA Node",
+      "state": "UP",
+      "job": "uptime-kuma",
+      "scrapeDuration": "85.24ms",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "healthReason": "",
+      "labels": {
+        "instance": "192.168.77.32:3001",
+        "job": "uptime-kuma"
+      },
+      "installedOnTarget": true,
+      "id": "tgt-uptime-kuma-11",
+      "endpoint": "http://192.168.77.32:3001/metrics",
+      "exporterType": "Prometheus Exporter",
+      "lastScrape": "2s ago",
+      "mappedModule": "website",
+      "isPaused": false,
+      "selectedMetrics": [
+        "monitor_status",
+        "monitor_response_time",
+        "monitor_cert_days_remaining"
+      ]
+    },
+    {
+      "lastScrape": "5s ago",
+      "endpoint": "http://192.168.77.30:3001/metrics",
+      "isPaused": false,
+      "healthReason": "",
+      "selectedMetrics": [
+        "monitor_status",
+        "monitor_response_time",
+        "monitor_cert_days_remaining"
+      ],
+      "mappedNodeName": "UPTIME-KUMA-LOCAL Node",
+      "updatedAt": "2026-08-30T07:38:46.324Z",
+      "scrapeDuration": "81.94ms",
+      "id": "tgt-uptime-kuma-local-12",
+      "state": "UP",
+      "labels": {
+        "instance": "192.168.77.30:3001",
+        "job": "uptime-kuma-local"
+      },
+      "job": "uptime-kuma-local",
+      "mappedModule": "website",
+      "installedOnTarget": true,
+      "exporterType": "Prometheus Exporter"
+    }
+  ]
+}

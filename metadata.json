@@ -1,6 +1,6 @@
 {
-  "name": "NetWatch Pro - Monitoring Dashboard",
-  "description": "Unified monitoring dashboard for MikroTik, Servers, VMs, WAF, and Websites with Prometheus, Grafana, SNMP, InfluxDB activity logs, 2FA, AI predictive analytics, Telegram & Email alerts, and automated backups.",
+  "name": "OmniGuard-Live",
+  "description": "Unified infrastructure and cybersecurity monitoring platform for MikroTik, Ruijie Gateways, Linux Servers, Proxmox VMs, WAF Firewall, and Web Services with live Prometheus telemetry, InfluxDB audit trails, and automated alerts.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
