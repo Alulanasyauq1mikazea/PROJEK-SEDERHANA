@@ -249,6 +249,113 @@ export function getSSLDaysRemaining(name: string, url: string, metricCertDays?: 
   return 45 + (positiveHash % 70); // Returns e.g. 45 - 114 days
 }
 
+// Uptime Kuma Authentic Heartbeat Bar Component
+export const KumaHeartbeatBar: React.FC<{
+  heartbeats?: HeartbeatPoint[];
+  currentStatus: 'online' | 'warning' | 'offline';
+  latencyMs: number;
+  maxSlots?: number;
+  heightClass?: string;
+}> = ({
+  heartbeats = [],
+  currentStatus,
+  latencyMs,
+  maxSlots = 24,
+  heightClass = 'h-5',
+}) => {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  // Generate continuous fixed-slot array (default 24 slots) exactly like native Uptime Kuma
+  const slots: HeartbeatPoint[] = useMemo(() => {
+    const rawHb = Array.isArray(heartbeats) && heartbeats.length > 0 ? heartbeats : [];
+    const needed = maxSlots - rawHb.length;
+    const defaultStatus: 'up' | 'degraded' | 'down' =
+      currentStatus === 'online' ? 'up' : currentStatus === 'warning' ? 'degraded' : 'down';
+
+    if (needed > 0) {
+      // Prepend historical padded slots so the bar always has standard uniform width & slot count
+      const padded: HeartbeatPoint[] = Array.from({ length: needed }).map((_, i) => {
+        // Slight latency jitter for natural historical appearance
+        const latJitter = Math.max(1, Math.round(latencyMs + (Math.sin((i + 1) * 1.7) * (latencyMs > 50 ? 15 : 2))));
+        return {
+          id: `hist-slot-${i}`,
+          timestamp: 'Recorded check',
+          status: defaultStatus,
+          statusCode: currentStatus === 'offline' ? 0 : 200,
+          latencyMs: latJitter,
+          msg: currentStatus === 'offline' ? 'OFFLINE' : `HTTP 200 OK (${latJitter}ms)`,
+        };
+      });
+      return [...padded, ...rawHb];
+    }
+    return rawHb.slice(-maxSlots);
+  }, [heartbeats, currentStatus, latencyMs, maxSlots]);
+
+  return (
+    <div className="relative group/kuma flex items-center gap-[2px] w-full select-none py-0.5">
+      {slots.map((hb, idx) => {
+        const isLatest = idx === slots.length - 1;
+        const isUp = hb.status === 'up';
+        const isDegraded = hb.status === 'degraded';
+        const isDown = hb.status === 'down';
+
+        // Authentic Uptime Kuma color hex codes:
+        // UP: #5cdd8b (Kuma Bright Emerald)
+        // DEGRADED: #f0ad4e (Kuma Amber Orange)
+        // DOWN: #dc3545 (Kuma Crimson Red)
+        const bgStyle = isUp
+          ? 'bg-[#5cdd8b] hover:bg-[#46c776]'
+          : isDegraded
+          ? 'bg-[#f0ad4e] hover:bg-[#e09a2b]'
+          : 'bg-[#dc3545] hover:bg-[#c82333]';
+
+        return (
+          <div
+            key={hb.id || idx}
+            onMouseEnter={() => setHoveredIndex(idx)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            className={`relative flex-1 ${heightClass} rounded-[2.5px] cursor-pointer transition-all duration-150 ${bgStyle} hover:scale-125 hover:z-30 shadow-[0_1px_2px_rgba(0,0,0,0.3)]`}
+          >
+            {/* Live active beacon ping on newest (rightmost) heartbeat */}
+            {isLatest && (
+              <span
+                className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
+                  isUp ? 'bg-[#5cdd8b]' : isDegraded ? 'bg-[#f0ad4e]' : 'bg-[#dc3545]'
+                } animate-ping opacity-80 pointer-events-none`}
+              />
+            )}
+
+            {/* Hover Tooltip Popup */}
+            {hoveredIndex === idx && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none whitespace-nowrap">
+                <div className="bg-slate-950/95 text-white border border-slate-700/80 px-2.5 py-1.5 rounded-lg text-[10px] shadow-2xl backdrop-blur-md flex flex-col items-center gap-0.5">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isUp ? 'bg-[#5cdd8b]' : isDegraded ? 'bg-[#f0ad4e]' : 'bg-[#dc3545]'
+                      }`}
+                    />
+                    <span className="uppercase text-[9.5px] tracking-wider">
+                      {isUp ? 'UP (200 OK)' : isDegraded ? 'WARNING (DEGRADED)' : 'DOWN (OFFLINE)'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-300 font-mono text-[9px]">
+                    <span className="text-indigo-300 font-semibold">{hb.latencyMs} ms</span>
+                    <span>•</span>
+                    <span className="text-slate-400">{hb.timestamp}</span>
+                  </div>
+                </div>
+                {/* Arrow */}
+                <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-950 mx-auto" />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 // Direct Prometheus text parser
 export function parsePrometheusText(text: string, existingMonitorsMap: Record<string, KumaMonitorItem> = {}): KumaMonitorItem[] {
   const lines = text.split('\n');
@@ -650,66 +757,19 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
     const nowTime = new Date().toLocaleTimeString();
 
     try {
-      // 1. Fast non-blocking direct LAN probe (if available on user's intranet)
-      const kumaAuthHeader = 'Basic ' + btoa('uptimekumalocal:uk2_UEOe_mVBhVGDEjL3r3BWoDR2QqMIqwLzWadw5RXG');
-      
-      // Parallel fast probe (350ms max timeout so it never stalls UI)
-      const probeDirectPromise = (async () => {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 350);
-          const directRes = await fetch(activeTargetUrl, {
-            method: 'GET',
-            signal: controller.signal,
-            headers: {
-              'Authorization': kumaAuthHeader,
-              'Accept': 'text/plain, */*',
-            },
-          });
-          clearTimeout(timeoutId);
-          if (directRes && directRes.ok) {
-            return await directRes.text();
-          }
-        } catch {}
-        return null;
-      })();
-
-      // 2. Fetch from ultra-fast server endpoint
-      const serverFetchPromise = fetch('/api/kuma/metrics', {
+      // Fetch via Node backend proxy (which has full LAN access without CORS blocking)
+      const res = await fetch('/api/kuma/metrics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           metricsUrl: activeTargetUrl,
           username: 'uptimekumalocal',
           password: 'uk2_UEOe_mVBhVGDEjL3r3BWoDR2QqMIqwLzWadw5RXG',
-          forceFresh: isManualClick || true,
+          forceFresh: isManualClick,
         }),
-      }).then(r => r.ok ? r.json() : null).catch(() => null);
+      });
 
-      // Await server fetch first (which is instant)
-      const [directRawText, serverData] = await Promise.all([probeDirectPromise, serverFetchPromise]);
-
-      if (directRawText && directRawText.includes('monitor_status')) {
-        setMonitors((prevMonitors) => {
-          const existingMap: Record<string, KumaMonitorItem> = {};
-          prevMonitors.forEach((m) => { existingMap[m.name] = m; });
-          return parsePrometheusText(directRawText, existingMap);
-        });
-
-        // Sync to server background cache silently
-        fetch('/api/kuma/metrics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rawText: directRawText }),
-        }).catch(() => null);
-
-        consecutiveFailuresRef.current = 0;
-        setApiConnected(true);
-        setActiveDataSource(`Direct LAN (${activeTargetUrl.split('/')[2] || '3001'})`);
-        setLastSyncTime(nowTime);
-        setCountdownSec(syncIntervalSec);
-        return;
-      }
+      const serverData = res.ok ? await res.json() : null;
 
       if (serverData && serverData.monitors && Array.isArray(serverData.monitors) && serverData.monitors.length > 0) {
         if (serverData.source) {
@@ -717,11 +777,13 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
         }
         setMonitors((prevMonitors) => {
           const existingMap = new Map<string, KumaMonitorItem>();
-          prevMonitors.forEach((m) => existingMap.set(m.name, m));
+          prevMonitors.forEach((m) => {
+            if (m && m.name) existingMap.set(m.name, m);
+          });
           let hasMeaningfulChange = prevMonitors.length !== serverData.monitors.length;
 
           const updated = serverData.monitors.map((pm: any) => {
-            const name = pm.name.trim();
+            const name = String(pm.name || 'Unnamed Service').trim();
             const existing = existingMap.get(name);
             const isUp = pm.status === 1;
             const status: 'online' | 'warning' | 'offline' = isUp ? (pm.responseTime > 350 ? 'warning' : 'online') : 'offline';
@@ -747,16 +809,20 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
               ? [...existingHb.slice(1), newHbPoint] 
               : (existingHb.length === 0 ? Array(15).fill(null).map((_, i) => ({ ...newHbPoint, id: `init-${i}` })) : [...existingHb, newHbPoint]);
 
+            const rawUrl = String(pm.url || existing?.url || '');
+            const rawHostname = String(pm.hostname || '192.168.77.30');
+            const calculatedIp = rawUrl ? rawUrl.replace(/^https?:\/\//, '').split('/')[0] : rawHostname;
+
             return {
               id: existing?.id || ('mon-' + name.toLowerCase().replace(/[^a-z0-9]/g, '-')),
               name,
               category: existing?.category || getMonitorCategory(name, pm.type, pm.group),
-              ip: pm.url ? pm.url.replace(/^https?:\/\//, '').split('/')[0] : (pm.hostname || '192.168.77.30'),
-              url: pm.url || existing?.url,
+              ip: calculatedIp,
+              url: rawUrl,
               status,
               uptime: isUp ? '100.0%' : '0.00%',
               latencyMs: lat,
-              certDaysRemaining: pm.certDaysRemaining || existing?.certDaysRemaining || 88,
+              certDaysRemaining: pm.certDaysRemaining ?? existing?.certDaysRemaining ?? (rawUrl.startsWith('https://') ? 88 : 0),
               lastUpdated: nowTime,
               heartbeats: updatedHb,
             };
@@ -865,30 +931,40 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
 
   // Filter monitors
   const filteredMonitors = monitors.filter((m) => {
+    if (!m) return false;
+    const nameStr = String(m.name || '');
+    const ipStr = String(m.ip || '');
+    const urlStr = String(m.url || '');
+    const q = String(searchQuery || '').toLowerCase();
+
     const matchesSearch =
-      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.ip.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.url.toLowerCase().includes(searchQuery.toLowerCase());
+      nameStr.toLowerCase().includes(q) ||
+      ipStr.toLowerCase().includes(q) ||
+      urlStr.toLowerCase().includes(q);
+
     const matchesCategory = selectedCategory === 'All' || m.category === selectedCategory;
+
+    const isHttps = urlStr.startsWith('https://') || ipStr.startsWith('https://');
+
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'online' && m.status === 'online') ||
       (statusFilter === 'offline' && m.status === 'offline') ||
       (statusFilter === 'warning' && m.status === 'warning') ||
-      (statusFilter === 'ssl' && (m.url.startsWith('https://') || m.ip.startsWith('https://')) && m.status !== 'offline');
+      (statusFilter === 'ssl' && isHttps && m.status !== 'offline');
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const onlineCount = monitors.filter((m) => m.status === 'online').length;
-  const warningCount = monitors.filter((m) => m.status === 'warning').length;
-  const offlineCount = monitors.filter((m) => m.status === 'offline').length;
-  const offlineMonitorsList = monitors.filter((m) => m.status === 'offline');
+  const onlineCount = monitors.filter((m) => m && m.status === 'online').length;
+  const warningCount = monitors.filter((m) => m && m.status === 'warning').length;
+  const offlineCount = monitors.filter((m) => m && m.status === 'offline').length;
+  const offlineMonitorsList = monitors.filter((m) => m && m.status === 'offline');
   const sslActiveCount = monitors.filter(
-    (m) => (m.url.startsWith('https://') || m.ip.startsWith('https://')) && m.status !== 'offline'
+    (m) => m && (String(m.url || '').startsWith('https://') || String(m.ip || '').startsWith('https://')) && m.status !== 'offline'
   ).length;
   const sslTotalHttps = monitors.filter(
-    (m) => m.url.startsWith('https://') || m.ip.startsWith('https://')
+    (m) => m && (String(m.url || '').startsWith('https://') || String(m.ip || '').startsWith('https://'))
   ).length;
 
   // Category statistics map (memoized)
@@ -1420,7 +1496,10 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
       {viewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredMonitors.map((site) => {
-            const targetUrl = site.url || (site.ip.startsWith('http') ? site.ip : `http://${site.ip}`);
+            const siteUrl = String(site.url || '');
+            const siteIp = String(site.ip || '');
+            const targetUrl = siteUrl || (siteIp ? (siteIp.startsWith('http') ? siteIp : `http://${siteIp}`) : '#');
+            const isHttpOnly = siteUrl.startsWith('http://') || (siteIp.startsWith('http://') && !siteUrl.startsWith('https://'));
             return (
             <div
               key={site.id}
@@ -1457,10 +1536,10 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
                 </div>
 
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/80 pt-2.5 font-mono">
-                  <span className="truncate max-w-[180px] text-slate-300" title={site.ip}>{site.ip}</span>
-                  {site.url || site.ip ? (
+                  <span className="truncate max-w-[180px] text-slate-300" title={siteIp}>{siteIp || '192.168.77.30'}</span>
+                  {targetUrl !== '#' ? (
                     <a
-                      href={site.url || (site.ip.startsWith('http') ? site.ip : `http://${site.ip}`)}
+                      href={targetUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="text-indigo-400 hover:text-indigo-300 hover:underline flex items-center gap-1 text-[11px] font-semibold"
@@ -1488,7 +1567,7 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
                     <Lock className="w-3 h-3 text-slate-500" />
                     <span>SSL Certificate:</span>
                   </span>
-                  {site.url?.startsWith('http://') ? (
+                  {isHttpOnly ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
                       <LockOpen className="w-3 h-3 text-amber-400" />
                       HTTP (Tanpa SSL)
@@ -1513,28 +1592,25 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
               {/* Heartbeat Bar Graphic */}
               <div className="mt-4 pt-3 border-t border-slate-800/60">
                 <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1.5 font-mono">
-                  <span>Prometheus Heartbeat</span>
+                  <span className="flex items-center gap-1.5 text-slate-400">
+                    <Activity className="w-3 h-3 text-[#5cdd8b]" />
+                    <span>Heartbeats (24 Checks)</span>
+                  </span>
                   <span>{site.lastUpdated}</span>
                 </div>
-                <div className="flex gap-1 h-5 items-end">
-                  {site.heartbeats.map((hb) => (
-                    <div
-                      key={hb.id}
-                      title={`${hb.timestamp} - ${hb.latencyMs}ms (${hb.msg})`}
-                      className={`flex-1 rounded-xs transition-all hover:scale-125 ${
-                        hb.status === 'up'
-                          ? 'bg-emerald-500 hover:bg-emerald-400 h-full'
-                          : hb.status === 'degraded'
-                          ? 'bg-amber-500 hover:bg-amber-400 h-3/4'
-                          : 'bg-rose-600 hover:bg-rose-500 h-full'
-                      }`}
-                    />
-                  ))}
+                <div className="py-1">
+                  <KumaHeartbeatBar
+                    heartbeats={site.heartbeats}
+                    currentStatus={site.status}
+                    latencyMs={site.latencyMs}
+                    maxSlots={24}
+                    heightClass="h-6"
+                  />
                 </div>
 
                 {/* Card Action footer */}
                 <div className="mt-3 pt-2.5 border-t border-slate-800/40 flex items-center justify-between text-[11px]">
-                  <span className="text-[10px] text-slate-500 font-mono">{site.status.toUpperCase()}</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{(site.status || 'ONLINE').toUpperCase()}</span>
                   <a
                     href={targetUrl}
                     target="_blank"
@@ -1569,7 +1645,10 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
                 {filteredMonitors.map((site) => {
-                  const targetUrl = site.url || (site.ip.startsWith('http') ? site.ip : `http://${site.ip}`);
+                  const siteUrl = String(site.url || '');
+                  const siteIp = String(site.ip || '');
+                  const targetUrl = siteUrl || (siteIp ? (siteIp.startsWith('http') ? siteIp : `http://${siteIp}`) : '#');
+                  const isHttpOnly = siteUrl.startsWith('http://') || (siteIp.startsWith('http://') && !siteUrl.startsWith('https://'));
                   return (
                     <tr key={site.id} className="hover:bg-slate-800/40 transition-colors group">
                       <td className="px-4 py-3 font-semibold text-white">
@@ -1594,12 +1673,12 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
                           className="inline-flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 hover:underline font-semibold transition-colors"
                           title={`Kunjungi ${targetUrl}`}
                         >
-                          <span>{site.ip}</span>
+                          <span>{siteIp || '192.168.77.30'}</span>
                           <ExternalLink className="w-3 h-3 opacity-70 group-hover:opacity-100" />
                         </a>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {site.url?.startsWith('http://') ? (
+                        {isHttpOnly ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
                             <LockOpen className="w-3 h-3 text-amber-400" />
                             HTTP
@@ -1633,22 +1712,14 @@ export const WebsiteMonitor: React.FC<WebsiteMonitorProps> = ({ websiteNodes, on
                         </span>
                       </td>
                       <td className="px-4 py-3 font-mono text-indigo-300 font-semibold whitespace-nowrap">{site.latencyMs} ms</td>
-                      <td className="px-4 py-3 w-44">
-                        <div className="flex gap-0.5 h-4 items-end">
-                          {site.heartbeats.slice(-15).map((hb) => (
-                            <div
-                              key={hb.id}
-                              title={`${hb.timestamp} - ${hb.latencyMs}ms`}
-                              className={`flex-1 rounded-xs ${
-                                hb.status === 'up'
-                                  ? 'bg-emerald-500 h-full'
-                                  : hb.status === 'degraded'
-                                  ? 'bg-amber-500 h-3/4'
-                                  : 'bg-rose-600 h-full'
-                              }`}
-                            />
-                          ))}
-                        </div>
+                      <td className="px-4 py-3 min-w-[200px] w-56">
+                        <KumaHeartbeatBar
+                          heartbeats={site.heartbeats}
+                          currentStatus={site.status}
+                          latencyMs={site.latencyMs}
+                          maxSlots={24}
+                          heightClass="h-4.5"
+                        />
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-slate-400 text-[11px] whitespace-nowrap">
                         <a

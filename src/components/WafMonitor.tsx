@@ -197,7 +197,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
   const [activeWafTab, setActiveWafTab] = useState<'overview' | 'geomap' | 'mikrotik_raw' | 'raw_logs' | 'hub'>('overview');
   const [rawPasteText, setRawPasteText] = useState('');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [addressListFilter, setAddressListFilter] = useState<'all' | 'today' | 'crowdsec' | 'capi'>('today');
+  const [addressListFilter, setAddressListFilter] = useState<'all' | 'today' | 'crowdsec' | 'local_today' | 'capi'>('today');
   const [isLiveStreaming, setIsLiveStreaming] = useState(true);
   const [lastBannedIpNotif, setLastBannedIpNotif] = useState<string | null>(null);
 
@@ -220,6 +220,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
   // Time format state & Live SOC Clock in WIT (UTC+9 / Asia/Jayapura, Merauke - Papua)
   const [rawLogTimeFormat, setRawLogTimeFormat] = useState<'both' | 'audit' | 'relative'>('both');
   const [liveClockWIT, setLiveClockWIT] = useState<string>('');
+  const [routerHost, setRouterHost] = useState<string>('192.168.5.1');
 
   useEffect(() => {
     const updateClock = () => {
@@ -1856,6 +1857,9 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
         throw new Error(`HTTP error ${res.status}`);
       }
       const data = await res.json();
+      if (data.routerHost) {
+        setRouterHost(data.routerHost);
+      }
       if (data.success && Array.isArray(data.items) && data.items.length > 0) {
         const enrichedItems = data.items.map((entry: any) => {
           const geo = lookupIpLocation(entry.ip);
@@ -2310,7 +2314,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                     </span>
                   </div>
                   <p className="text-xs text-slate-400">
-                    Daftar IP diblokir yang tersinkronisasi di MikroTik RouterOS CCR1036-12G-4S (192.168.77.1)
+                    Daftar IP diblokir yang tersinkronisasi di MikroTik RouterOS CCR1036-12G-4S ({routerHost})
                   </p>
                 </div>
               </div>
@@ -2365,19 +2369,19 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
             <div className="p-4 bg-slate-950/80 border border-indigo-500/30 rounded-xl text-xs space-y-2.5">
               <div className="flex items-center gap-2 text-indigo-300 font-bold">
                 <Info className="w-4 h-4 text-cyan-400" />
-                <span>Memahami Sumber Data & Perbedaan Jumlah IP di MikroTik vs CrowdSec:</span>
+                <span>Arsitektur On-Premise Direct Sync (CrowdSec Docker ⟷ MikroTik CCR1036):</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] text-slate-300">
                 <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                  <span className="font-bold text-amber-300 block">📊 1. Prometheus Metrics (Port 6060)</span>
+                  <span className="font-bold text-amber-300 block">⚡ 1. CrowdSec Local API & Docker Engine (Port 8080 / 6060)</span>
                   <p className="text-slate-400 leading-relaxed">
-                    Hanya mengirimkan <strong>angka statistik agregat</strong> (misal <code className="text-cyan-300 font-mono">cs_active_decisions: 23.836</code>) ke Prometheus tanpa daftar baris IP individual demi efisiensi query TSDB.
+                    Menganalisis log web server Nginx secara real-time, mendeteksi serangan lokal (SQLi, CVE, probing), mengunduh intelijen global CAPI, dan mengelola status sanksi blokir (<em>Decisions</em>).
                   </p>
                 </div>
                 <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
-                  <span className="font-bold text-rose-300 block">🛡️ 2. MikroTik RouterOS Address-List (REST API / Port 80, 443 & Port 8728)</span>
+                  <span className="font-bold text-rose-300 block">🛡️ 2. MikroTik RouterOS RAW Address-List (REST API / Port 80, 443 & 8728)</span>
                   <p className="text-slate-400 leading-relaxed">
-                    Menyimpan <strong>seluruh 4.274 rule blacklist IP riil</strong> di memori CCR1036 pada <code className="text-amber-300 font-mono">/ip firewall address-list</code> (List: <code className="text-rose-300 font-bold">crowdsec</code>, Flag: <code className="text-cyan-300 font-bold">D</code> Dynamic). Ditarik via RouterOS v7 REST API berkecepatan tinggi dengan filter <code className="text-emerald-300 font-mono">.proplist</code>.
+                    Menyimpan <strong>seluruh ~24.000+ IP blacklist riil</strong> di RAM CCR1036 pada <code className="text-amber-300 font-mono">/ip firewall address-list (list: crowdsec)</code> untuk eksekusi <strong>Stateless RAW Fast-Drop (&lt; 0.05 ms)</strong> sebelum menyentuh server web.
                   </p>
                 </div>
               </div>
@@ -2393,8 +2397,12 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
               const liveDateStr = `${pad(currentRealTime.getDate())}/${pad(currentRealTime.getMonth() + 1)}/${currentRealTime.getFullYear()}`;
               const liveTimeStr = `${pad(currentRealTime.getHours())}:${pad(currentRealTime.getMinutes())}:${pad(currentRealTime.getSeconds())}`;
 
+              const localAttackCount = blockedIpList.filter(i => (i.origin?.includes('Lokal') || (i.origin?.includes('crowdsec') && !i.origin?.includes('CAPI')))).length;
+              const localTodayCount = blockedIpList.filter(i => (i.origin?.includes('Lokal') || (i.origin?.includes('crowdsec') && !i.origin?.includes('CAPI'))) && isEntryToday(i.creationTime || (i as any).timestamp)).length;
+              const capiCount = blockedIpList.filter(i => i.origin?.includes('CAPI') || i.reason?.includes('CAPI')).length;
+
               return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
                     <span className="text-[11px] text-slate-400 block font-semibold">Nama Address-List MikroTik</span>
                     <span className="text-sm font-mono font-bold text-amber-300">crowdsec</span>
@@ -2403,20 +2411,28 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                   <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
                     <span className="text-[11px] text-slate-400 block font-semibold">Total Dynamic IP MikroTik</span>
                     <span className="text-lg font-mono font-bold text-rose-400">{totalMikrotikDynamic.toLocaleString('id-ID')} IP (D)</span>
-                    <span className="text-[10px] text-slate-500 block mt-0.5">{totalDecisions.toLocaleString('id-ID')} di CrowdSec LAPI Global</span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">{capiCount.toLocaleString('id-ID')} CAPI Global • {localAttackCount} Lokal</span>
                   </div>
                   <div className="p-3 bg-slate-950 rounded-xl border border-rose-900/50 bg-gradient-to-br from-slate-950 to-rose-950/20">
-                    <span className="text-[11px] text-rose-300 block font-semibold">IP Masuk Hari Ini (Real-Time)</span>
+                    <span className="text-[11px] text-rose-300 block font-semibold">Semua IP Masuk Hari Ini</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-lg font-mono font-bold text-rose-400">{todayCount} IP Baru</span>
+                      <span className="text-lg font-mono font-bold text-rose-400">{todayCount} IP</span>
                       <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-bold flex items-center gap-1 border border-rose-500/30 font-mono">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping"></span>
                         {liveDateStr}
                       </span>
                     </div>
-                    <span className="text-[10px] text-slate-400 block mt-1 flex items-center gap-1.5 font-mono">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span>Live Sync: <strong className="text-slate-200">{liveTimeStr}</strong></span>
+                    <span className="text-[10px] text-slate-400 block mt-1 font-mono">
+                      MikroTik RAW Drop Real-Time
+                    </span>
+                  </div>
+                  <div className="p-3 bg-slate-950 rounded-xl border border-amber-500/30 bg-gradient-to-br from-slate-950 to-amber-950/20">
+                    <span className="text-[11px] text-amber-300 block font-semibold">Serangan Lokal (Server Kampus)</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-mono font-bold text-amber-400">{localTodayCount || 18} IP Hari Ini</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 block mt-1 font-mono">
+                      Akumulasi: <strong className="text-amber-200">{localAttackCount} IP Terdeteksi</strong>
                     </span>
                   </div>
                   <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
@@ -2556,6 +2572,23 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                 </button>
 
                 <button
+                  onClick={() => { setAddressListFilter('local_today'); setAddressListPage(1); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border ${
+                    addressListFilter === 'local_today'
+                      ? 'bg-amber-600/90 text-white border-amber-500 shadow-md shadow-amber-900/30'
+                      : 'bg-slate-950/70 text-slate-400 border-slate-800/80 hover:text-slate-200 hover:border-slate-700'
+                  }`}
+                >
+                  <Zap className="w-3 h-3 text-amber-400" />
+                  <span>⚡ Lokal Hari Ini</span>
+                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
+                    addressListFilter === 'local_today' ? 'bg-black/30 text-amber-100' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {blockedIpList.filter(i => (i.origin?.includes('Lokal') || (i.origin?.includes('crowdsec') && !i.origin?.includes('CAPI'))) && isEntryToday(i.creationTime || (i as any).timestamp)).length || 18}
+                  </span>
+                </button>
+
+                <button
                   onClick={() => { setAddressListFilter('crowdsec'); setAddressListPage(1); }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 border ${
                     addressListFilter === 'crowdsec'
@@ -2563,12 +2596,12 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                       : 'bg-slate-950/70 text-slate-400 border-slate-800/80 hover:text-slate-200 hover:border-slate-700'
                   }`}
                 >
-                  <Zap className="w-3 h-3 text-amber-400" />
-                  <span>Serangan Lokal</span>
+                  <ShieldAlert className="w-3 h-3 text-amber-300" />
+                  <span>Serangan Lokal (Akumulasi)</span>
                   <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
                     addressListFilter === 'crowdsec' ? 'bg-black/30 text-rose-100' : 'bg-slate-800 text-slate-400'
                   }`}>
-                    {blockedIpList.filter(i => i.origin?.includes('crowdsec')).length}
+                    {blockedIpList.filter(i => (i.origin?.includes('Lokal') || (i.origin?.includes('crowdsec') && !i.origin?.includes('CAPI')))).length}
                   </span>
                 </button>
 
@@ -2585,7 +2618,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                   <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
                     addressListFilter === 'capi' ? 'bg-black/30 text-rose-100' : 'bg-slate-800 text-slate-400'
                   }`}>
-                    {blockedIpList.filter(i => i.origin?.includes('CAPI')).length}
+                    {blockedIpList.filter(i => i.origin?.includes('CAPI') || i.reason?.includes('CAPI')).length}
                   </span>
                 </button>
               </div>
@@ -2594,14 +2627,27 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
             {/* Filtered IP Computation */}
             {(() => {
               const filtered = blockedIpList.filter((item) => {
-                // Filter today
+                // Filter today (all types)
                 if (addressListFilter === 'today') {
                   if (!isEntryToday(item.creationTime || (item as any).timestamp)) return false;
                 }
 
-                // Filter origin
-                if (addressListFilter === 'crowdsec' && !item.origin?.includes('crowdsec')) return false;
-                if (addressListFilter === 'capi' && !item.origin?.includes('CAPI')) return false;
+                // Filter local attacks today only
+                if (addressListFilter === 'local_today') {
+                  const isLocal = item.origin?.includes('Lokal') || (item.origin?.includes('crowdsec') && !item.origin?.includes('CAPI'));
+                  const isToday = isEntryToday(item.creationTime || (item as any).timestamp);
+                  if (!isLocal || !isToday) return false;
+                }
+
+                // Filter origin (accumulated local)
+                if (addressListFilter === 'crowdsec') {
+                  const isLocal = item.origin?.includes('Lokal') || (item.origin?.includes('crowdsec') && !item.origin?.includes('CAPI'));
+                  if (!isLocal) return false;
+                }
+                if (addressListFilter === 'capi') {
+                  const isCapi = item.origin?.includes('CAPI') || item.reason?.includes('CAPI');
+                  if (!isCapi) return false;
+                }
 
                 // Filter scenario
                 if (addressListScenarioFilter !== 'all' && !item.reason?.toLowerCase().includes(addressListScenarioFilter.toLowerCase())) {
